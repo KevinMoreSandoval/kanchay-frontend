@@ -1,0 +1,1 @@
+// export * from "./Button"; --> Ejemplo de exportar un componentente  
