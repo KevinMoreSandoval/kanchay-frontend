@@ -1,12 +1,7 @@
-
+import RegisterPage from './auth/register/page';
 
 function App() {
-
-  return (
-    <>
-      el inicio
-    </>
-  )
+  return <RegisterPage />;
 }
 
-export default App
+export default App;

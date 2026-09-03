@@ -1,0 +1,198 @@
+.loginContainer {
+  min-height: 100vh;
+  background-color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  padding: 16px;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.topLeftPlaceholder {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 80px;
+  height: 80px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.topLeftPlaceholder img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.loginIconWrapper {
+  background-color: #e6f4ea;
+  padding: 12px;
+  border-radius: 16px;
+  margin-bottom: 16px;
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconLarge {
+  width: 24px;
+  height: 24px;
+}
+
+.iconSmall {
+  width: 16px;
+  height: 16px;
+}
+
+.loginTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.loginSubtitle {
+  font-size: 13px;
+  color: #9ca3af;
+  margin: 0 0 24px 0;
+}
+
+.loginCard {
+  background-color: #ffffff;
+  padding: 32px 24px;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 340px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  border: 1px solid #f1f5f9;
+  box-sizing: border-box;
+}
+
+.loginForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.formLabel {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.inputIcon {
+  position: absolute;
+  left: 12px;
+  color: #9ca3af;
+  display: flex;
+  pointer-events: none;
+}
+
+.formInput {
+  width: 100%;
+  padding-left: 36px;
+  padding-right: 12px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-size: 13px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.formInput:focus {
+  border-color: #10b981;
+}
+
+.formOptions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.rememberLabel {
+  display: flex;
+  align-items: center;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.rememberCheckbox {
+  margin-right: 6px;
+  accent-color: #10b981;
+}
+
+.forgotLink {
+  color: #10b981;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.forgotLink:hover,
+.registerLink:hover {
+  text-decoration: underline;
+}
+
+.submitButton {
+  width: 100%;
+  background-color: #10b981;
+  color: #ffffff;
+  font-weight: 600;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background-color 0.2s;
+}
+
+.submitButton:hover {
+  background-color: #059669;
+}
+
+.registerText {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.registerLink {
+  color: #10b981;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.loginFooter {
+  margin-top: 32px;
+  font-size: 11px;
+  color: #9ca3af;
+}
