@@ -1,198 +1,249 @@
-.loginContainer {
+.pageLayout {
+  display: flex;
   min-height: 100vh;
-  background-color: #f8fafc;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  padding: 16px;
-  box-sizing: border-box;
+  width: 100%;
+  background-color: #ffffff;
+}
+
+/* Panel Izquierdo */
+.visualPanel {
+  flex: 1;
   position: relative;
-}
-
-.topLeftPlaceholder {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  width: 80px;
-  height: 80px;
-  border: 2px dashed #cbd5e1;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #ffffff;
-  color: #94a3b8;
-  font-size: 11px;
-}
-
-.topLeftPlaceholder img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 10px;
-}
-
-.loginIconWrapper {
-  background-color: #e6f4ea;
-  padding: 12px;
-  border-radius: 16px;
-  margin-bottom: 16px;
-  color: #10b981;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.iconLarge {
-  width: 24px;
-  height: 24px;
-}
-
-.iconSmall {
-  width: 16px;
-  height: 16px;
-}
-
-.loginTitle {
-  font-size: 24px;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 4px 0;
-}
-
-.loginSubtitle {
-  font-size: 13px;
-  color: #9ca3af;
-  margin: 0 0 24px 0;
-}
-
-.loginCard {
-  background-color: #ffffff;
-  padding: 32px 24px;
-  border-radius: 16px;
-  width: 100%;
-  max-width: 340px;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
-  border: 1px solid #f1f5f9;
-  box-sizing: border-box;
-}
-
-.loginForm {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  justify-content: space-between;
+  padding: 3rem;
+  /* Fondo oscuro placeholder con textura/gradiente similar a la cancha */
+  background: linear-gradient(135deg, #111827 0%, #1f2937 50%, #0f172a 100%);
+  color: #ffffff;
+  overflow: hidden;
+}
+
+/* Opcional: Para agregar una imagen real de fondo luego */
+/* .visualPanel { background: url('/path-to-image.jpg') center/cover no-repeat; } */
+
+.brandOverlay {
+  position: relative;
+  z-index: 2;
+}
+
+.logoContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ballIcon {
+  font-size: 1.5rem;
+}
+
+.brandName {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.brandHighlight {
+  color: #34d399;
+}
+
+.heroTextContainer {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 2rem;
+}
+
+.heroText {
+  font-size: 1.75rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: #f3f4f6;
+  margin: 0;
+}
+
+/* Panel Derecho */
+.formPanel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem;
+  background-color: #ffffff;
+}
+
+.formWrapper {
+  width: 100%;
+  max-width: 380px;
+}
+
+.topIconWrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background-color: #e0f2fe;
+  color: #0284c7;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.25rem 0;
+}
+
+.subtitle {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0 0 2rem 0;
+}
+
+.alertError {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  margin-bottom: 1.25rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
 .formGroup {
   display: flex;
   flex-direction: column;
+  gap: 0.375rem;
 }
 
-.formLabel {
-  display: block;
-  font-size: 12px;
+.label {
+  font-size: 0.875rem;
   font-weight: 600;
-  color: #374151;
-  margin-bottom: 6px;
+  color: #1e293b;
 }
 
-.inputWrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.inputIcon {
-  position: absolute;
-  left: 12px;
-  color: #9ca3af;
-  display: flex;
-  pointer-events: none;
-}
-
-.formInput {
+.input {
   width: 100%;
-  padding-left: 36px;
-  padding-right: 12px;
-  padding-top: 10px;
-  padding-bottom: 10px;
-  font-size: 13px;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  outline: none;
+  padding: 0.75rem 0.875rem;
+  font-size: 0.875rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #0f172a;
   box-sizing: border-box;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.formInput:focus {
-  border-color: #10b981;
+.input:focus {
+  outline: none;
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
 }
 
-.formOptions {
+.inputInvalid {
+  border-color: #ef4444;
+}
+
+.errorMessage {
+  font-size: 0.75rem;
+  color: #dc2626;
+}
+
+.optionsRow {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  font-size: 11px;
+  align-items: center;
+  font-size: 0.8125rem;
 }
 
-.rememberLabel {
+.checkboxLabel {
   display: flex;
   align-items: center;
-  color: #6b7280;
+  gap: 0.5rem;
+  color: #475569;
   cursor: pointer;
 }
 
-.rememberCheckbox {
-  margin-right: 6px;
-  accent-color: #10b981;
+.checkbox {
+  accent-color: #0ea5e9;
+  width: 14px;
+  height: 14px;
 }
 
-.forgotLink {
-  color: #10b981;
-  font-weight: 600;
-  text-decoration: none;
+.forgotButton {
+  background: none;
+  border: none;
+  color: #0ea5e9;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  padding: 0;
 }
 
-.forgotLink:hover,
-.registerLink:hover {
+.forgotButton:hover {
   text-decoration: underline;
 }
 
 .submitButton {
   width: 100%;
-  background-color: #10b981;
+  padding: 0.75rem;
+  background-color: #0ea5e9;
   color: #ffffff;
   font-weight: 600;
-  padding: 10px;
-  border-radius: 10px;
+  font-size: 0.875rem;
   border: none;
-  font-size: 13px;
+  border-radius: 6px;
   cursor: pointer;
-  margin-top: 8px;
   transition: background-color 0.2s;
+  margin-top: 0.5rem;
 }
 
-.submitButton:hover {
-  background-color: #059669;
+.submitButton:hover:not(:disabled) {
+  background-color: #0284c7;
 }
 
-.registerText {
+.submitButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.footer {
   text-align: center;
-  margin-top: 20px;
-  font-size: 11px;
-  color: #9ca3af;
+  margin-top: 2rem;
+  font-size: 0.8125rem;
+  color: #64748b;
 }
 
-.registerLink {
-  color: #10b981;
-  font-weight: 700;
-  text-decoration: none;
+.linkButton {
+  background: none;
+  border: none;
+  color: #0ea5e9;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
 }
 
-.loginFooter {
-  margin-top: 32px;
-  font-size: 11px;
-  color: #9ca3af;
+.linkButton:hover {
+  text-decoration: underline;
+}
+
+/* Responsivo para dispositivos móviles */
+@media (max-width: 768px) {
+  .pageLayout {
+    flex-direction: column;
+  }
+
+  .visualPanel {
+    display: none; /* Se oculta el panel lateral en móviles */
+  }
+
+  .formPanel {
+    padding: 1.5rem;
+  }
 }

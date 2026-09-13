@@ -1,12 +1,18 @@
+// src/app/pages/login/LoginPage.jsx
+
 import React, { useState } from "react";
 import styles from "./login.module.css";
 
-export default function LoginPage() {
+export default function LoginPage({ onLoginSuccess, onNavigateToRegister }) {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     rememberMe: false,
   });
+
+  const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -14,142 +20,184 @@ export default function LoginPage() {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
+
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: null }));
+    }
+    if (serverError) {
+      setServerError("");
+    }
   };
 
-  const handleSubmit = (e) => {
+  const validate = () => {
+    const newErrors = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!formData.email.trim()) {
+      newErrors.email = "El correo electrónico es obligatorio.";
+    } else if (!emailRegex.test(formData.email.trim())) {
+      newErrors.email = "Ingresa un correo electrónico válido.";
+    }
+
+    if (!formData.password) {
+      newErrors.password = "La contraseña es obligatoria.";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login data:", formData);
+    setServerError("");
+
+    if (!validate()) return;
+
+    setIsSubmitting(true);
+    try {
+      if (onLoginSuccess) {
+        await onLoginSuccess({
+          email: formData.email,
+          password: formData.password,
+        });
+      }
+    } catch (err) {
+      setServerError(err.message || "Error al conectar con el servidor. Revisa tu conexión.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className={styles.loginContainer}>
-      {/* Placeholder Esquina Superior Izquierda */}
-      <div className={styles.topLeftPlaceholder}>
-        <span>Imagen</span>
+    <div className={styles.pageLayout}>
+      {/* Panel Izquierdo Visual */}
+      <div className={styles.visualPanel}>
+        <div className={styles.brandOverlay}>
+          <div className={styles.logoContainer}>
+            <span className={styles.ballIcon}>⚽</span>
+            <span className={styles.brandName}>
+              Cancha<span className={styles.brandHighlight}>Ya</span>
+            </span>
+          </div>
+        </div>
+
+        <div className={styles.heroTextContainer}>
+          <p className={styles.heroText}>
+            Reserva tu cancha,<br />juega tu partido
+          </p>
+        </div>
       </div>
 
-      {/* Icono Superior */}
-      <div className={styles.loginIconWrapper}>
-        <svg
-          className={styles.iconLarge}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          strokeWidth="2.5"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
-          />
-        </svg>
-      </div>
+      {/* Panel Derecho - Formulario Real */}
+      <div className={styles.formPanel}>
+        <div className={styles.formWrapper}>
+          <div className={styles.topIconWrapper}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </div>
 
-      {/* Títulos */}
-      <h1 className={styles.loginTitle}>Bienvenido</h1>
-      <p className={styles.loginSubtitle}>Ingresa a tu cuenta para continuar</p>
+          <h1 className={styles.title}>Bienvenido</h1>
+          <p className={styles.subtitle}>Ingresa a tu cuenta para continuar</p>
 
-      {/* Tarjeta del Formulario */}
-      <div className={styles.loginCard}>
-        <form onSubmit={handleSubmit} className={styles.loginForm}>
-          {/* Correo */}
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Correo electrónico</label>
-            <div className={styles.inputWrapper}>
-              <span className={styles.inputIcon}>
-                <svg
-                  className={styles.iconSmall}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  strokeWidth="2"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                  />
-                </svg>
-              </span>
+          {serverError && (
+            <div className={styles.alertError} role="alert" aria-live="assertive">
+              {serverError}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className={styles.form} noValidate>
+            <div className={styles.formGroup}>
+              <label htmlFor="email" className={styles.label}>
+                Correo electrónico
+              </label>
               <input
+                id="email"
                 type="email"
                 name="email"
                 placeholder="correo@ejemplo.com"
                 value={formData.email}
                 onChange={handleChange}
-                className={styles.formInput}
+                disabled={isSubmitting}
+                className={`${styles.input} ${errors.email ? styles.inputInvalid : ""}`}
+                aria-invalid={!!errors.email}
+                aria-describedby={errors.email ? "email-error" : undefined}
                 required
               />
+              {errors.email && (
+                <span id="email-error" className={styles.errorMessage}>
+                  {errors.email}
+                </span>
+              )}
             </div>
-          </div>
 
-          {/* Contraseña */}
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Contraseña</label>
-            <div className={styles.inputWrapper}>
-              <span className={styles.inputIcon}>
-                <svg
-                  className={styles.iconSmall}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  strokeWidth="2"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-              </span>
+            <div className={styles.formGroup}>
+              <label htmlFor="password" className={styles.label}>
+                Contraseña
+              </label>
               <input
+                id="password"
                 type="password"
                 name="password"
                 placeholder="••••••••"
                 value={formData.password}
                 onChange={handleChange}
-                className={styles.formInput}
+                disabled={isSubmitting}
+                className={`${styles.input} ${errors.password ? styles.inputInvalid : ""}`}
+                aria-invalid={!!errors.password}
+                aria-describedby={errors.password ? "password-error" : undefined}
                 required
               />
+              {errors.password && (
+                <span id="password-error" className={styles.errorMessage}>
+                  {errors.password}
+                </span>
+              )}
             </div>
+
+            <div className={styles.optionsRow}>
+              <label htmlFor="rememberMe" className={styles.checkboxLabel}>
+                <input
+                  id="rememberMe"
+                  type="checkbox"
+                  name="rememberMe"
+                  checked={formData.rememberMe}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                  className={styles.checkbox}
+                />
+                Recordarme
+              </label>
+              <button
+                type="button"
+                className={styles.forgotButton}
+                onClick={() => alert("Próximamente disponible.")}
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
+
+            <button
+              type="submit"
+              className={styles.submitButton}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Iniciando sesión..." : "Iniciar sesión"}
+            </button>
+          </form>
+
+          <div className={styles.footer}>
+            <span>¿No tienes una cuenta? </span>
+            <button
+              type="button"
+              onClick={onNavigateToRegister}
+              className={styles.linkButton}
+            >
+              Regístrate aquí
+            </button>
           </div>
-
-          {/* Recordarme y Link */}
-          <div className={styles.formOptions}>
-            <label className={styles.rememberLabel}>
-              <input
-                type="checkbox"
-                name="rememberMe"
-                checked={formData.rememberMe}
-                onChange={handleChange}
-                className={styles.rememberCheckbox}
-              />
-              Recordarme
-            </label>
-            <a href="#" className={styles.forgotLink}>
-              ¿Olvidaste tu contraseña?
-            </a>
-          </div>
-
-          {/* Botón Iniciar Sesión */}
-          <button type="submit" className={styles.submitButton}>
-            Iniciar sesión
-          </button>
-        </form>
-
-        {/* Registro */}
-        <div className={styles.registerText}>
-          ¿No tienes una cuenta?{" "}
-          <a href="#" className={styles.registerLink}>
-            Regístrate aquí
-          </a>
         </div>
       </div>
-
-      {/* Footer */}
-      <footer className={styles.loginFooter}>
-        Sistema de Reservas de Canchas Deportivas
-      </footer>
     </div>
   );
 }
