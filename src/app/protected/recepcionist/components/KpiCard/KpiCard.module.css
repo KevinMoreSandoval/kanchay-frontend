@@ -1,0 +1,10 @@
+.kpiCard{display:flex;align-items:center;justify-content:space-between;min-height:112px;background:#fff;border:1px solid #e8eeeb;border-radius:15px;padding:20px 22px;box-shadow:0 3px 12px #122a1c08}
+.kpiCard p{color:#697873;font-size:13px;font-weight:600;margin-bottom:10px}
+.kpiCard strong{font-size:31px;line-height:1}
+.kpiIcon{width:44px;height:44px;border-radius:12px;display:grid;place-items:center}
+.green{background:#e5faef;color:#13a969}
+.purple{background:#f4eafa;color:#9956ca}
+.blue{background:#e7f0ff;color:#4983da}
+.red{background:#ffe9e9;color:#e46c6c}
+@media(max-width:700px){.kpiCard{min-height:95px;padding:14px}.kpiCard p{font-size:11px}.kpiCard strong{font-size:25px}.kpiIcon{width:36px;height:36px}}
+@media(max-width:390px){.kpiIcon{width:31px;height:31px}.kpiCard{padding:10px}}

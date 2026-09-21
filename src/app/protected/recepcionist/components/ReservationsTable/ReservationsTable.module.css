@@ -1,0 +1,17 @@
+.tableScroll{overflow-x:auto;background:#fff;border:1px solid #e8eeeb;border-radius:14px}
+.table{border-collapse:collapse;width:100%;min-width:720px;font-size:13px}
+.table th{text-align:left;color:#8a9791;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;background:#fbfdfc}
+.table th,.table td{padding:17px 18px;border-bottom:1px solid #edf1ef}
+.table tr:last-child td{border-bottom:0}
+.customer,.amount{font-weight:700;color:#233b32}
+.status{display:inline-block;padding:6px 9px;border-radius:7px;font-size:11px;font-weight:800}
+.pendiente{background:#fff3d7;color:#9a6b00}
+.confirmada{background:#e3f8ed;color:#148050}
+.en_curso{background:#eeeaff;color:#7051b8}
+.finalizada{background:#e7f0ff;color:#4276b9}
+.no_asistio{background:#ffebea;color:#c45757}
+.viewIcon{color:#798b82;display:inline-flex}
+.emptyState{min-height:220px;background:#fff;border:1px dashed #dce6e0;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:#b7c4bc;text-align:center;padding:25px}
+.emptyState strong{color:#304039;font-size:15px}
+.emptyState p{color:#94a099;font-size:13px}
+.srOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}

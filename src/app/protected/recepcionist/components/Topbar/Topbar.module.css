@@ -1,0 +1,15 @@
+.topbar{height:78px;margin:12px 16px 0;border-radius:14px;background:linear-gradient(105deg,#07964b,#1acb71);box-shadow:0 4px 16px #07874d25;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:12px 18px}
+.searchBox{height:42px;width:min(420px,50%);display:flex;align-items:center;gap:10px;padding:0 14px;background:#ffffff29;border:1px solid #ffffff33;border-radius:10px;color:#fff}
+.searchBox input{width:100%;border:0;outline:0;background:transparent;color:white;font:inherit;font-size:14px}
+.searchBox input::placeholder{color:#e2f8e9}
+.searchBox:focus-within{outline:2px solid #fff;outline-offset:2px}
+.topbarRight{display:flex;align-items:center;gap:28px;color:white}
+.notification{display:flex}
+.profile{display:flex;align-items:center;gap:10px}
+.profile strong,.profile small{display:block}
+.profile strong{font-size:13px}
+.profile small{font-size:10px;opacity:.82;margin-top:2px}
+.avatar{display:grid;place-items:center;background:#fff;color:#0ca85a;border-radius:9px;width:36px;height:36px;font-weight:800}
+@media(max-width:700px){.topbar{margin:10px;height:auto;min-height:65px}.searchBox{width:100%;min-width:0}.topbarRight{gap:12px}.profile small{display:none}.profile strong{font-size:11px}}
+@media(max-width:390px){.profile strong{display:none}}
+.srOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}

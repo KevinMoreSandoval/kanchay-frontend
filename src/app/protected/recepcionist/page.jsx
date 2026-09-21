@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import { CalendarDays, CheckCircle2, CircleX, Clock3 } from 'lucide-react'
 import { reservations } from './reservations'
-import { KpiCard, ReservationsTable, Sidebar, Topbar } from './components'
-import styles from './reception.module.css'
+import { KpiCard } from './components/KpiCard/KpiCard'
+import { ReservationsTable } from './components/ReservationsTable/ReservationsTable'
+import { Sidebar } from './components/Sidebar/Sidebar'
+import { Topbar } from './components/Topbar/Topbar'
+import styles from './page.module.css'
 
 const today = new Date()
 const localDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
