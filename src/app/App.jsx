@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useAuth } from "./hooks/use-auth"; 
 import LoginPage from "./auth/login/page"; 
 import RegisterPage from "./auth/register/page"; 
+import ClientPage from "./protected/client/page"; // 1. Importa tu vista de cliente
 
 export default function App() {
   const { user, loading, isAuthenticated, login, logout } = useAuth();
@@ -20,11 +21,9 @@ export default function App() {
       return (
         <RegisterPage 
           onRegisterSuccess={(data) => {
-            // Si el backend devuelve token y usuario al registrarse, iniciamos sesión automáticamente:
             if (data?.token && data?.user) {
               login(data);
             } else {
-              // Si solo registra sin devolver token, lo enviamos al login
               setCurrentView("login");
             }
           }}
@@ -41,25 +40,6 @@ export default function App() {
     );
   }
 
-  return (
-    <main style={{ padding: "2rem", textAlign: "center" }}>
-      <h1>¡Bienvenido, {user?.firstName || user?.name || user?.email}!</h1>
-      <p>Has iniciado sesión correctamente.</p>
-      
-      <button 
-        onClick={logout}
-        style={{
-          padding: "0.5rem 1rem",
-          backgroundColor: "#ef4444",
-          color: "white",
-          border: "none",
-          borderRadius: "4px",
-          cursor: "pointer",
-          marginTop: "1rem"
-        }}
-      >
-        Cerrar Sesión
-      </button>
-    </main>
-  );
+  // 2. Reemplaza el bloque antiguo de bienvenida por tu ClientPage
+  return <ClientPage user={user} onLogout={logout} />;
 }

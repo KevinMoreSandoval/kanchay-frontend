@@ -1,0 +1,116 @@
+.card {
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #eaeaea;
+  width: 100%;
+  max-width: 320px;
+}
+
+.imageContainer {
+  position: relative;
+  width: 100%;
+  height: 180px;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.priceTag {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.contentContainer {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.courtTitle {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #111827;
+  margin: 0;
+}
+
+.locationContainer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.featuresContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.featureBadge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #f0fdf4;
+  color: #15803d;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.buttonContainer {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.detailsBtn, .reserveBtn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.2s;
+}
+
+.detailsBtn {
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  color: #374151;
+}
+
+.detailsBtn:hover {
+  background-color: #f3f4f6;
+}
+
+.reserveBtn {
+  background-color: #10b981;
+  border: 1px solid #10b981;
+  color: #ffffff;
+}
+
+.reserveBtn:hover {
+  background-color: #059669;
+}
