@@ -1,7 +1,120 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import styles from './register.module.css';
-import { registerApi } from '../../services/auth-service'; 
-import { User, IdCard, Calendar, Phone, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { registerApi } from '../../services/auth-service';
+
+const NAME_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+
+function validate(data) {
+  const errors = {};
+
+  if (!data.firstName.trim()) {
+    errors.firstName = 'El nombre es obligatorio.';
+  } else if (!NAME_REGEX.test(data.firstName.trim())) {
+    errors.firstName = 'Solo se permiten letras.';
+  }
+
+  if (!data.lastName.trim()) {
+    errors.lastName = 'El apellido es obligatorio.';
+  } else if (!NAME_REGEX.test(data.lastName.trim())) {
+    errors.lastName = 'Solo se permiten letras.';
+  }
+
+  if (!data.dni.trim()) {
+    errors.dni = 'El DNI es obligatorio.';
+  } else if (!/^\d{8}$/.test(data.dni.trim())) {
+    errors.dni = 'El DNI debe tener 8 dígitos.';
+  }
+
+  if (!data.birthDate) {
+    errors.birthDate = 'La fecha de nacimiento es obligatoria.';
+  }
+
+  if (!data.phone.trim()) {
+    errors.phone = 'El teléfono es obligatorio.';
+  } else if (!/^\d{9}$/.test(data.phone.trim())) {
+    errors.phone = 'Debe tener 9 dígitos.';
+  }
+
+  if (!data.email.trim()) {
+    errors.email = 'El correo es obligatorio.';
+  } else if (!EMAIL_REGEX.test(data.email.trim())) {
+    errors.email = 'Ingresa un correo válido.';
+  }
+
+  if (!data.password) {
+    errors.password = 'La contraseña es obligatoria.';
+  } else if (!PASSWORD_REGEX.test(data.password)) {
+    errors.password = 'Mínimo 8 caracteres, mayúscula, minúscula y número.';
+  }
+
+  if (!data.confirmPassword) {
+    errors.confirmPassword = 'Confirma tu contraseña.';
+  } else if (data.password !== data.confirmPassword) {
+    errors.confirmPassword = 'Las contraseñas no coinciden.';
+  }
+
+  if (!data.acceptTerms) {
+    errors.acceptTerms = 'Debes aceptar los términos y condiciones.';
+  }
+
+  return errors;
+}
+
+function Field({ id, label, error, action, ...inputProps }) {
+  return (
+    <div className={styles.formGroup}>
+      <label htmlFor={id} className={styles.label}>
+        {label}
+      </label>
+      <div className={styles.inputWrapper}>
+        <input
+          id={id}
+          name={id}
+          className={[
+            styles.input,
+            action ? styles.inputWithAction : '',
+            error ? styles.inputInvalid : '',
+          ].join(' ')}
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : undefined}
+          {...inputProps}
+        />
+        {action}
+      </div>
+      {error && (
+        <span id={`${id}-error`} className={styles.errorMessage}>
+          {error}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function PasswordField({ disabled, ...props }) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <Field
+      {...props}
+      type={visible ? 'text' : 'password'}
+      disabled={disabled}
+      action={
+        <button
+          type="button"
+          className={styles.togglePassword}
+          onClick={() => setVisible((prev) => !prev)}
+          disabled={disabled}
+          aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+        >
+          {visible ? <EyeOff size={18} /> : <Eye size={18} />}
+        </button>
+      }
+    />
+  );
+}
 
 export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin }) {
   const [formData, setFormData] = useState({
@@ -15,68 +128,33 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin }) {
     confirmPassword: '',
     acceptTerms: false,
   });
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
   const [errors, setErrors] = useState({});
+  const [errorMessage, setErrorMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
 
-    if (errors[name]) {
-      setErrors((prevErrors) => ({ ...prevErrors, [name]: '' }));
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-    const nameRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-
-    if (!formData.firstName.trim()) newErrors.firstName = 'Obligatorio.';
-    else if (!nameRegex.test(formData.firstName)) newErrors.firstName = 'Solo letras.';
-
-    if (!formData.lastName.trim()) newErrors.lastName = 'Obligatorio.';
-    else if (!nameRegex.test(formData.lastName)) newErrors.lastName = 'Solo letras.';
-
-    if (!formData.dni.trim()) newErrors.dni = 'DNI obligatorio.';
-    else if (!/^\d{8}$/.test(formData.dni)) newErrors.dni = 'Debe tener 8 dígitos.';
-
-    if (!formData.birthDate) newErrors.birthDate = 'Obligatorio.';
-
-    if (!formData.phone.trim()) newErrors.phone = 'Teléfono obligatorio.';
-    else if (!/^\d{9}$/.test(formData.phone)) newErrors.phone = 'Debe tener 9 dígitos.';
-
-    if (!formData.email.trim()) newErrors.email = 'Correo obligatorio.';
-    else if (!emailRegex.test(formData.email)) newErrors.email = 'Correo inválido.';
-
-    if (!formData.password) newErrors.password = 'Contraseña obligatoria.';
-    else if (!passwordRegex.test(formData.password)) newErrors.password = 'Mínimo 8 caracteres, mayúscula, minúscula y número.';
-
-    if (!formData.confirmPassword) newErrors.confirmPassword = 'Confirma tu contraseña.';
-    else if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Las contraseñas no coinciden.';
-
-    if (!formData.acceptTerms) newErrors.acceptTerms = 'Debes aceptar los términos y condiciones.';
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
+    if (errorMessage) setErrorMessage('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
-    if (!validateForm()) return;
-    setLoading(true);
 
+    const newErrors = validate(formData);
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
+
+    setLoading(true);
     try {
-      const payload = {
+      const data = await registerApi({
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         dni: formData.dni.trim(),
@@ -84,10 +162,9 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin }) {
         phone: formData.phone.trim(),
         email: formData.email.trim(),
         password: formData.password,
-      };
+      });
 
-      const data = await registerApi(payload);
-      if (onRegisterSuccess) onRegisterSuccess(data);
+      onRegisterSuccess?.(data);
     } catch (err) {
       setErrorMessage(err.message || 'Error de conexión con el servidor.');
     } finally {
@@ -95,240 +172,148 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin }) {
     }
   };
 
-  const fieldErrorStyle = {
-    color: '#ef4444',
-    fontSize: '0.75rem',
-    marginTop: '0.2rem',
-    display: 'block',
-  };
+  // Props comunes a todos los campos
+  const field = (id) => ({
+    id,
+    value: formData[id],
+    onChange: handleChange,
+    disabled: loading,
+    error: errors[id],
+  });
 
   return (
-    <div className={styles.container}>
-      <div className={styles.formCard}>
-        {/* Header */}
-        <div className={styles.header}>
-          <div className={styles.logoWrapper}>
-            <div className={styles.logoIcon}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" />
-                <path d="M9 3v18" />
-              </svg>
-            </div>
-            <span className={styles.logoText}>
-              Cancha<span className={styles.logoGreen}>Ya</span>
-            </span>
+    <div className={styles.pageLayout}>
+      <aside className={styles.visualPanel}>
+        <div className={styles.brandOverlay}>
+          <img src="/assets/svg/banner.svg" alt="" aria-hidden="true" className={styles.banner} />
+        </div>
+      </aside>
+
+      <main className={styles.formPanel}>
+        <div className={styles.formWrapper}>
+          <div className={styles.containerLogo}>
+            <img src="/assets/img/logo-court.png" alt="Court" className={styles.img} />
           </div>
           <h1 className={styles.title}>Crear cuenta</h1>
-          <p className={styles.subtitle}>Completa el formulario para registrarte</p>
-        </div>
+          <p className={styles.subtitle}>Completa tus datos para comenzar</p>
 
-        {errorMessage && (
-          <div style={{ color: '#ef4444', marginBottom: '0.8rem', fontSize: '0.85rem', textAlign: 'center' }}>
-            {errorMessage}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className={styles.form} noValidate>
-          {/* DOS BLOQUES SUPERIORES */}
-          <div className={styles.topSectionsGrid}>
-            <div className={styles.sectionCard}>
-              <div className={styles.sectionHeader}>
-                <span className={styles.greenDot}></span>
-                INFORMACIÓN PERSONAL
-              </div>
-
-              <div className={styles.rowTwoCols}>
-                <div className={styles.inputGroup}>
-                  <label>Nombre</label>
-                  <div className={styles.inputWrapper}>
-                    <User className={styles.inputIcon} size={18} />
-                    <input
-                      type="text"
-                      name="firstName"
-                      placeholder="Juan"
-                      value={formData.firstName}
-                      onChange={handleChange}
-                      className={styles.input}
-                    />
-                  </div>
-                  {errors.firstName && <span style={fieldErrorStyle}>{errors.firstName}</span>}
-                </div>
-
-                <div className={styles.inputGroup}>
-                  <label>Apellido</label>
-                  <div className={styles.inputWrapper}>
-                    <User className={styles.inputIcon} size={18} />
-                    <input
-                      type="text"
-                      name="lastName"
-                      placeholder="Pérez"
-                      value={formData.lastName}
-                      onChange={handleChange}
-                      className={styles.input}
-                    />
-                  </div>
-                  {errors.lastName && <span style={fieldErrorStyle}>{errors.lastName}</span>}
-                </div>
-              </div>
-
-              <div className={styles.inputGroup}>
-                <label>DNI</label>
-                <div className={styles.inputWrapper}>
-                  <IdCard className={styles.inputIcon} size={18} />
-                  <input
-                    type="text"
-                    name="dni"
-                    maxLength={8}
-                    placeholder="Ingrese su DNI"
-                    value={formData.dni}
-                    onChange={handleChange}
-                    className={styles.input}
-                  />
-                </div>
-                {errors.dni && <span style={fieldErrorStyle}>{errors.dni}</span>}
-              </div>
+          {errorMessage && (
+            <div className={styles.alertError} role="alert">
+              {errorMessage}
             </div>
+          )}
 
-            <div className={styles.sectionCard}>
-              <div className={styles.sectionHeader}>
-                <span className={styles.greenDot}></span>
-                DATOS DE CONTACTO Y CUENTA
-              </div>
-
-              <div className={styles.rowTwoCols}>
-                <div className={styles.inputGroup}>
-                  <label>Fecha de nac.</label>
-                  <div className={styles.inputWrapper}>
-                    <Calendar className={styles.inputIcon} size={18} />
-                    <input
-                      type="date"
-                      name="birthDate"
-                      value={formData.birthDate}
-                      onChange={handleChange}
-                      className={styles.input}
-                    />
-                  </div>
-                  {errors.birthDate && <span style={fieldErrorStyle}>{errors.birthDate}</span>}
-                </div>
-
-                <div className={styles.inputGroup}>
-                  <label>Teléfono</label>
-                  <div className={styles.inputWrapper}>
-                    <Phone className={styles.inputIcon} size={18} />
-                    <input
-                      type="tel"
-                      name="phone"
-                      maxLength={9}
-                      placeholder="+51 *** *** ***"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className={styles.input}
-                    />
-                  </div>
-                  {errors.phone && <span style={fieldErrorStyle}>{errors.phone}</span>}
-                </div>
-              </div>
-
-              <div className={styles.inputGroup}>
-                <label>Correo electrónico</label>
-                <div className={styles.inputWrapper}>
-                  <Mail className={styles.inputIcon} size={18} />
-                  <input
-                    type="email"
-                    name="email"
-                    placeholder="correo@ejemplo.com"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className={styles.input}
-                  />
-                </div>
-                {errors.email && <span style={fieldErrorStyle}>{errors.email}</span>}
-              </div>
-            </div>
-          </div>
-
-          {/* BLOQUE INFERIOR DE SEGURIDAD */}
-          <div className={styles.sectionCard}>
-            <div className={styles.sectionHeader}>
-              <span className={styles.greenDot}></span>
-              SEGURIDAD
-            </div>
-
-            <div className={styles.inputGroup}>
-              <label>Contraseña</label>
-              <div className={styles.inputWrapper}>
-                <Lock className={styles.inputIcon} size={18} />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  placeholder="Mínimo 8 caracteres"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className={styles.input}
-                />
-                <button
-                  type="button"
-                  className={styles.togglePassword}
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-              {errors.password && <span style={fieldErrorStyle}>{errors.password}</span>}
-            </div>
-
-            <div className={styles.inputGroup}>
-              <label>Confirmar contraseña</label>
-              <div className={styles.inputWrapper}>
-                <Lock className={styles.inputIcon} size={18} />
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  name="confirmPassword"
-                  placeholder="Repite tu contraseña"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className={styles.input}
-                />
-                <button
-                  type="button"
-                  className={styles.togglePassword}
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-              {errors.confirmPassword && <span style={fieldErrorStyle}>{errors.confirmPassword}</span>}
-            </div>
-          </div>
-
-          <div className={styles.termsWrapper}>
-            <label className={styles.termsLabel}>
-              <input
-                type="checkbox"
-                name="acceptTerms"
-                checked={formData.acceptTerms}
-                onChange={handleChange}
-                className={styles.checkbox}
+          <form onSubmit={handleSubmit} className={styles.form} noValidate>
+            <div className={styles.fieldsGrid}>
+              <Field
+                {...field('firstName')}
+                label="Nombre"
+                type="text"
+                placeholder="Juan"
+                autoComplete="given-name"
               />
-              <span>Acepto los <span className={styles.termsLink}>términos y condiciones</span> y la <span className={styles.termsLink}>política de privacidad</span></span>
-            </label>
-            {errors.acceptTerms && <span style={fieldErrorStyle}>{errors.acceptTerms}</span>}
-          </div>
+              <Field
+                {...field('lastName')}
+                label="Apellido"
+                type="text"
+                placeholder="Pérez"
+                autoComplete="family-name"
+              />
+              <Field
+                {...field('dni')}
+                label="DNI"
+                type="text"
+                inputMode="numeric"
+                maxLength={8}
+                placeholder="8 dígitos"
+                autoComplete="off"
+              />
+              <Field
+                {...field('birthDate')}
+                label="Fecha de nacimiento"
+                type="date"
+                autoComplete="bday"
+              />
+              <Field
+                {...field('phone')}
+                label="Teléfono"
+                type="tel"
+                inputMode="numeric"
+                maxLength={9}
+                placeholder="999 999 999"
+                autoComplete="tel"
+              />
+              <Field
+                {...field('email')}
+                label="Correo electrónico"
+                type="email"
+                placeholder="correo@ejemplo.com"
+                autoComplete="email"
+              />
+              <PasswordField
+                {...field('password')}
+                label="Contraseña"
+                placeholder="Mínimo 8 caracteres"
+                autoComplete="new-password"
+              />
+              <PasswordField
+                {...field('confirmPassword')}
+                label="Confirmar contraseña"
+                placeholder="Repite tu contraseña"
+                autoComplete="new-password"
+              />
+            </div>
 
-          <button type="submit" className={styles.submitBtn} disabled={loading}>
-            {loading ? 'Cargando...' : 'Crear cuenta ➔'}
-          </button>
+            <div className={styles.termsWrapper}>
+              <label htmlFor="acceptTerms" className={styles.termsLabel}>
+                <input
+                  id="acceptTerms"
+                  type="checkbox"
+                  name="acceptTerms"
+                  checked={formData.acceptTerms}
+                  onChange={handleChange}
+                  disabled={loading}
+                  className={styles.checkbox}
+                  aria-invalid={!!errors.acceptTerms}
+                  aria-describedby={errors.acceptTerms ? 'acceptTerms-error' : undefined}
+                />
+                <span>
+                  Acepto los{' '}
+                  <button type="button" className={styles.termsLink}>
+                    términos y condiciones
+                  </button>{' '}
+                  y la{' '}
+                  <button type="button" className={styles.termsLink}>
+                    política de privacidad
+                  </button>
+                </span>
+              </label>
 
-          <div className={styles.divider}><span>o</span></div>
+              {errors.acceptTerms && (
+                <span id="acceptTerms-error" className={styles.errorMessage}>
+                  {errors.acceptTerms}
+                </span>
+              )}
+            </div>
 
-          <p className={styles.footerText}>
+            <button type="submit" className={styles.submitButton} disabled={loading}>
+              {loading ? 'Creando cuenta...' : 'Crear cuenta'}
+            </button>
+          </form>
+
+          <p className={styles.footer}>
             ¿Ya tienes una cuenta?{' '}
-            <button type="button" onClick={onNavigateToLogin} className={styles.linkBtn}>
+            <button
+              type="button"
+              onClick={onNavigateToLogin}
+              className={styles.linkButton}
+              disabled={loading}
+            >
               Inicia sesión
             </button>
           </p>
-        </form>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }

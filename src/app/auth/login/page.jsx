@@ -1,68 +1,86 @@
-// src/app/pages/login/LoginPage.jsx
+import { useState } from 'react';
+import styles from './login.module.css';
 
-import React, { useState } from "react";
-import styles from "./login.module.css";
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validate({ email, password }) {
+  const errors = {};
+
+  if (!email.trim()) {
+    errors.email = 'El correo electrónico es obligatorio.';
+  } else if (!EMAIL_REGEX.test(email.trim())) {
+    errors.email = 'Ingresa un correo electrónico válido.';
+  }
+
+  if (!password) {
+    errors.password = 'La contraseña es obligatoria.';
+  }
+
+  return errors;
+}
+
+function Field({ id, label, error, ...inputProps }) {
+  return (
+    <div className={styles.formGroup}>
+      <label htmlFor={id} className={styles.label}>
+        {label}
+      </label>
+      <input
+        id={id}
+        name={id}
+        className={`${styles.input} ${error ? styles.inputInvalid : ''}`}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${id}-error` : undefined}
+        {...inputProps}
+      />
+      {error && (
+        <span id={`${id}-error`} className={styles.errorMessage}>
+          {error}
+        </span>
+      )}
+    </div>
+  );
+}
 
 export default function LoginPage({ onLoginSuccess, onNavigateToRegister }) {
   const [formData, setFormData] = useState({
-    email: "",
-    password: "",
+    email: '',
+    password: '',
     rememberMe: false,
   });
-
   const [errors, setErrors] = useState({});
-  const [serverError, setServerError] = useState("");
+  const [serverError, setServerError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: type === 'checkbox' ? checked : value,
     }));
 
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: null }));
-    }
-    if (serverError) {
-      setServerError("");
-    }
-  };
-
-  const validate = () => {
-    const newErrors = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!formData.email.trim()) {
-      newErrors.email = "El correo electrónico es obligatorio.";
-    } else if (!emailRegex.test(formData.email.trim())) {
-      newErrors.email = "Ingresa un correo electrónico válido.";
-    }
-
-    if (!formData.password) {
-      newErrors.password = "La contraseña es obligatoria.";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: null }));
+    if (serverError) setServerError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setServerError("");
+    setServerError('');
 
-    if (!validate()) return;
+    const newErrors = validate(formData);
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
 
     setIsSubmitting(true);
     try {
-      if (onLoginSuccess) {
-        await onLoginSuccess({
-          email: formData.email,
-          password: formData.password,
-        });
-      }
+      await onLoginSuccess?.({
+        email: formData.email.trim(),
+        password: formData.password,
+        rememberMe: formData.rememberMe,
+      });
     } catch (err) {
-      setServerError(err.message || "Error al conectar con el servidor. Revisa tu conexión.");
+      setServerError(err.message || 'Error al conectar con el servidor. Revisa tu conexión.');
     } finally {
       setIsSubmitting(false);
     }
@@ -70,90 +88,55 @@ export default function LoginPage({ onLoginSuccess, onNavigateToRegister }) {
 
   return (
     <div className={styles.pageLayout}>
-      {/* Panel Izquierdo Visual */}
-      <div className={styles.visualPanel}>
+      <aside className={styles.visualPanel}>
         <div className={styles.brandOverlay}>
-          <div className={styles.logoContainer}>
-            <span className={styles.ballIcon}>⚽</span>
-            <span className={styles.brandName}>
-              Cancha<span className={styles.brandHighlight}>Ya</span>
-            </span>
-          </div>
+          <img src="/assets/svg/banner.svg" alt="" aria-hidden="true" className={styles.banner} />
         </div>
+      </aside>
 
-        <div className={styles.heroTextContainer}>
-          <p className={styles.heroText}>
-            Reserva tu cancha,<br />juega tu partido
-          </p>
-        </div>
-      </div>
-
-      {/* Panel Derecho - Formulario Real */}
-      <div className={styles.formPanel}>
+      <main className={styles.formPanel}>
         <div className={styles.formWrapper}>
-          <div className={styles.topIconWrapper}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
+          <div className={styles.containerLogo}>
+            <img src="/assets/img/logo-court.png" alt="Court" className={styles.img} />
           </div>
-
-          <h1 className={styles.title}>Bienvenido</h1>
-          <p className={styles.subtitle}>Ingresa a tu cuenta para continuar</p>
+          <h1 className={styles.title}>Tu deporte, más cerca que nunca</h1>
+          <p className={styles.tagline}>Encuentra, reserva y juega.</p>
+          <p className={styles.subtitle}>
+            Ingresa tus datos para <strong>iniciar sesión.</strong>
+          </p>
 
           {serverError && (
-            <div className={styles.alertError} role="alert" aria-live="assertive">
+            <div className={styles.alertError} role="alert">
               {serverError}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className={styles.form} noValidate>
-            <div className={styles.formGroup}>
-              <label htmlFor="email" className={styles.label}>
-                Correo electrónico
-              </label>
-              <input
-                id="email"
-                type="email"
-                name="email"
-                placeholder="correo@ejemplo.com"
-                value={formData.email}
-                onChange={handleChange}
-                disabled={isSubmitting}
-                className={`${styles.input} ${errors.email ? styles.inputInvalid : ""}`}
-                aria-invalid={!!errors.email}
-                aria-describedby={errors.email ? "email-error" : undefined}
-                required
-              />
-              {errors.email && (
-                <span id="email-error" className={styles.errorMessage}>
-                  {errors.email}
-                </span>
-              )}
-            </div>
+            <Field
+              id="email"
+              label="Correo electrónico"
+              type="email"
+              placeholder="correo@ejemplo.com"
+              autoComplete="email"
+              value={formData.email}
+              onChange={handleChange}
+              disabled={isSubmitting}
+              error={errors.email}
+              required
+            />
 
-            <div className={styles.formGroup}>
-              <label htmlFor="password" className={styles.label}>
-                Contraseña
-              </label>
-              <input
-                id="password"
-                type="password"
-                name="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                disabled={isSubmitting}
-                className={`${styles.input} ${errors.password ? styles.inputInvalid : ""}`}
-                aria-invalid={!!errors.password}
-                aria-describedby={errors.password ? "password-error" : undefined}
-                required
-              />
-              {errors.password && (
-                <span id="password-error" className={styles.errorMessage}>
-                  {errors.password}
-                </span>
-              )}
-            </div>
+            <Field
+              id="password"
+              label="Contraseña"
+              type="password"
+              placeholder="••••••••"
+              autoComplete="current-password"
+              value={formData.password}
+              onChange={handleChange}
+              disabled={isSubmitting}
+              error={errors.password}
+              required
+            />
 
             <div className={styles.optionsRow}>
               <label htmlFor="rememberMe" className={styles.checkboxLabel}>
@@ -168,36 +151,29 @@ export default function LoginPage({ onLoginSuccess, onNavigateToRegister }) {
                 />
                 Recordarme
               </label>
+
               <button
                 type="button"
                 className={styles.forgotButton}
-                onClick={() => alert("Próximamente disponible.")}
+                onClick={() => alert('Próximamente disponible.')}
               >
                 ¿Olvidaste tu contraseña?
               </button>
             </div>
 
-            <button
-              type="submit"
-              className={styles.submitButton}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Iniciando sesión..." : "Iniciar sesión"}
+            <button type="submit" className={styles.submitButton} disabled={isSubmitting}>
+              {isSubmitting ? 'Iniciando sesión...' : 'Iniciar sesión'}
             </button>
           </form>
 
-          <div className={styles.footer}>
-            <span>¿No tienes una cuenta? </span>
-            <button
-              type="button"
-              onClick={onNavigateToRegister}
-              className={styles.linkButton}
-            >
+          <p className={styles.footer}>
+            ¿No tienes una cuenta?{' '}
+            <button type="button" onClick={onNavigateToRegister} className={styles.linkButton}>
               Regístrate aquí
             </button>
-          </div>
+          </p>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
