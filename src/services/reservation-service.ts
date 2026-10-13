@@ -1,11 +1,12 @@
 import { getManagedCourts } from './court-draft-service';
 import {
+  getCourts,
   getReservations,
   saveReservations,
   updateReservationPaymentStatus,
   updateReservationSurchargePayment,
 } from './local-data-service';
-import type { Reservation, ReservationScheduleChange } from '@/types';
+import type { Court, Reservation, ReservationScheduleChange } from '@/types';
 
 const PENDING_CONFIRMATION_WINDOW_MS = 15 * 60 * 1000;
 const CANCELLATION_CUTOFF_MS = 2 * 60 * 60 * 1000;
@@ -28,6 +29,62 @@ function getReservationEnd(reservation: Reservation): number {
 
 function parseSchedule(date: string, time: string): number {
   return new Date(`${date}T${time}:00`).getTime();
+}
+
+export function getReservationPermissions(reservation: Reservation, now = Date.now()) {
+  const editable = ['PENDIENTE', 'CONFIRMADA'].includes(reservation.estado);
+  const created = reservation.createdAt ? Date.parse(reservation.createdAt) : NaN;
+  const attendanceOpens = getReservationStart(reservation) - 15 * 60 * 1000;
+  const attendanceCloses = getReservationEnd(reservation);
+  return {
+    confirm:
+      reservation.estado === 'PENDIENTE' &&
+      (!Number.isFinite(created) || now <= created + PENDING_CONFIRMATION_WINDOW_MS),
+    cancel: editable && now <= getReservationStart(reservation) - CANCELLATION_CUTOFF_MS,
+    reschedule: editable,
+    attendance:
+      reservation.estado === 'CONFIRMADA' && now >= attendanceOpens && now < attendanceCloses,
+    attendanceReason:
+      now < attendanceOpens
+        ? 'La llegada se habilita 15 minutos antes del inicio.'
+        : now >= attendanceCloses
+          ? 'El horario de la reserva ya terminó.'
+          : '',
+    pay:
+      reservation.estado !== 'CANCELADA' &&
+      (reservation.paymentStatus ?? 'PENDIENTE') === 'PENDIENTE',
+    refund: reservation.paymentStatus === 'POR_REEMBOLSAR',
+  };
+}
+
+export function quoteReservation(
+  courtId: number,
+  schedule: ReservationSchedule,
+  now = Date.now(),
+  snapshot?: { courts: Court[]; reservations: Reservation[] }
+) {
+  const court = (snapshot?.courts ?? getCourts()).find((item) => item.id === courtId);
+  if (!court) throw new Error('Selecciona una cancha válida.');
+  const reservation: Reservation = {
+    id: -1,
+    courtId,
+    cancha: court.name,
+    cliente: '',
+    fecha: schedule.date,
+    horaInicio: schedule.startTime,
+    horaFin: schedule.endTime,
+    estado: 'PENDIENTE',
+    monto: 0,
+  };
+  assertScheduleAvailable(reservation, schedule, snapshot?.reservations ?? getReservations(), now);
+  const duration =
+    (parseSchedule(schedule.date, schedule.endTime) -
+      parseSchedule(schedule.date, schedule.startTime)) /
+    3_600_000;
+  const amount = Math.round(court.price * duration * 100) / 100;
+  if (!Number.isFinite(amount) || amount <= 0)
+    throw new Error('La cancha no tiene una tarifa válida.');
+  return { court, amount };
 }
 
 export function confirmReservation(id: number, now = Date.now()): Reservation[] {
@@ -113,6 +170,20 @@ function assertScheduleAvailable(
 ): void {
   const start = parseSchedule(schedule.date, schedule.startTime);
   const end = parseSchedule(schedule.date, schedule.endTime);
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(schedule.date) ||
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(schedule.startTime) ||
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(schedule.endTime)
+  ) {
+    throw new Error('Ingresa una fecha y horas válidas.');
+  }
+  const parsedDate = new Date(`${schedule.date}T12:00:00`);
+  if (
+    Number.isNaN(parsedDate.getTime()) ||
+    parsedDate.getDate() !== Number(schedule.date.slice(8))
+  ) {
+    throw new Error('La fecha seleccionada no existe.');
+  }
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
     throw new Error(
       'Ingresa una fecha y un horario válidos; el cierre debe ser posterior al inicio.'
@@ -211,11 +282,18 @@ export type CreateReservationData = Omit<
 
 export function createReservation(data: CreateReservationData, now = Date.now()): Reservation[] {
   const reservations = getReservations();
+  const quote = quoteReservation(
+    data.courtId,
+    { date: data.fecha, startTime: data.horaInicio, endTime: data.horaFin },
+    now,
+    { courts: getCourts(), reservations }
+  );
   const reservation: Reservation = {
     ...data,
+    cancha: quote.court.name,
+    monto: quote.amount,
     id: reservations.reduce((maxId, item) => Math.max(maxId, item.id), 0) + 1,
     cliente: data.cliente.trim(),
-    cancha: data.cancha.trim(),
     observaciones: data.observaciones?.trim() || undefined,
     estado: 'PENDIENTE',
     createdAt: new Date(now).toISOString(),
@@ -229,20 +307,12 @@ export function createReservation(data: CreateReservationData, now = Date.now())
   if (!Number.isFinite(reservation.monto) || reservation.monto <= 0) {
     throw new Error('El monto de la reserva debe ser mayor a cero.');
   }
-  if (!reservation.paymentMethod) {
+  if (
+    !reservation.paymentMethod ||
+    !['EFECTIVO', 'TARJETA', 'TRANSFERENCIA', 'YAPE_PLIN'].includes(reservation.paymentMethod)
+  ) {
     throw new Error('Selecciona un método de pago.');
   }
-
-  assertScheduleAvailable(
-    reservation,
-    {
-      date: reservation.fecha,
-      startTime: reservation.horaInicio,
-      endTime: reservation.horaFin,
-    },
-    reservations,
-    now
-  );
 
   return saveReservations([...reservations, reservation]);
 }

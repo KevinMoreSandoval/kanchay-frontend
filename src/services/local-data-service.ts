@@ -1,5 +1,5 @@
 import { readStoredValue, writeStoredValue } from './storage-service';
-import type { Court, Reservation, PaymentStatus } from '@/types';
+import type { Court, Reservation, PaymentStatus, PaymentMethod } from '@/types';
 
 const COURTS_KEY = 'kanchaya.courts';
 const RESERVATIONS_KEY = 'kanchaya.reservations';
@@ -176,7 +176,7 @@ export function getReservations(): Reservation[] {
     if (
       ['CONFIRMADA', 'EN_CURSO'].includes(reservation.estado) &&
       Number.isFinite(endAt) &&
-      now > endAt
+      now >= endAt
     ) {
       return {
         ...reservation,
@@ -220,21 +220,36 @@ export function deleteReservation(id: number): Reservation[] {
 
 export function updateReservationPaymentStatus(
   id: number,
-  paymentStatus: PaymentStatus
+  paymentStatus: PaymentStatus,
+  paymentMethod?: PaymentMethod
 ): Reservation[] {
   const reservations = getReservations();
   const reservation = reservations.find((item) => item.id === id);
   if (!reservation) throw new Error('No se encontró la reserva.');
 
+  if (
+    paymentMethod &&
+    !['EFECTIVO', 'TARJETA', 'TRANSFERENCIA', 'YAPE_PLIN'].includes(paymentMethod)
+  ) {
+    throw new Error('Selecciona un método de pago válido.');
+  }
+
   const isPaymentTransition =
-    (reservation.paymentStatus === 'PENDIENTE' && paymentStatus === 'PAGADO') ||
+    ((reservation.paymentStatus ?? 'PENDIENTE') === 'PENDIENTE' &&
+      paymentStatus === 'PAGADO' &&
+      reservation.estado !== 'CANCELADA' &&
+      Boolean(paymentMethod ?? reservation.paymentMethod)) ||
     (reservation.paymentStatus === 'POR_REEMBOLSAR' && paymentStatus === 'REEMBOLSADO');
   if (!isPaymentTransition) {
     throw new Error('La transición de pago solicitada no está permitida.');
   }
 
   return saveReservations(
-    reservations.map((item) => (item.id === id ? { ...item, paymentStatus } : item))
+    reservations.map((item) =>
+      item.id === id
+        ? { ...item, paymentStatus, paymentMethod: paymentMethod ?? item.paymentMethod }
+        : item
+    )
   );
 }
 
@@ -243,6 +258,8 @@ export function updateReservationSurchargePayment(id: number, changeIndex: numbe
   const reservation = reservations.find((item) => item.id === id);
   const change = reservation?.scheduleChanges?.[changeIndex];
   if (!reservation || !change) throw new Error('No se encontró el recargo de la reserva.');
+  if (reservation.estado === 'CANCELADA')
+    throw new Error('No se pueden cobrar recargos de una reserva cancelada.');
   if (change.surchargePaymentStatus !== 'PENDIENTE') {
     throw new Error('Este recargo ya fue pagado.');
   }

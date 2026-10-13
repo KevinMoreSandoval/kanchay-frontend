@@ -8,3 +8,5 @@ export * from './badge';
 export * from './form-field';
 export * from './password-input';
 export * from './loading';
+export * from './select';
+export * from './modal';

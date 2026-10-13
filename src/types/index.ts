@@ -50,6 +50,7 @@ export interface ReservationScheduleChange {
 
 export interface Reservation {
   id: number;
+  clienteId?: string;
   courtId?: number;
   cliente: string;
   cancha: string;
