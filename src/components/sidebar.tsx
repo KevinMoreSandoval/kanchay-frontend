@@ -109,7 +109,7 @@ export function Sidebar({
               aria-current={isActive ? 'page' : undefined}
               title={!isExpanded ? label : undefined}
               className={cn(
-                'relative z-10 flex h-[var(--item-h)] min-w-0 items-center justify-center gap-3 rounded-lg px-2 text-xs font-semibold',
+                'relative z-10 flex h-[var(--item-h)] cursor-pointer min-w-0 items-center justify-center gap-3 rounded-lg px-2 text-xs font-semibold',
                 'transition-colors duration-300 motion-reduce:transition-none',
                 'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground/50',
                 'md:justify-start md:px-4 md:text-base',
