@@ -1,12 +1,4 @@
-import {
-  CalendarDays,
-  CalendarClock,
-  CheckCircle2,
-  CircleX,
-  Clock3,
-  Hourglass,
-  XCircle,
-} from 'lucide-react';
+import { CalendarDays, CheckCircle2, CircleX, Clock3 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 export interface ReceptionKpiCounts {
@@ -31,16 +23,6 @@ export function ReceptionKpis({ counts }: ReceptionKpisProps) {
       Icon: CalendarDays,
     },
     {
-      label: 'Pendientes de confirmación',
-      value: counts.pending,
-      Icon: Hourglass,
-    },
-    {
-      label: 'Próximas',
-      value: counts.upcoming,
-      Icon: CalendarClock,
-    },
-    {
       label: 'En curso',
       value: counts.inProgress,
       Icon: Clock3,
@@ -54,11 +36,6 @@ export function ReceptionKpis({ counts }: ReceptionKpisProps) {
       label: 'No asistieron',
       value: counts.noShow,
       Icon: CircleX,
-    },
-    {
-      label: 'Canceladas',
-      value: counts.canceled,
-      Icon: XCircle,
     },
   ];
 
