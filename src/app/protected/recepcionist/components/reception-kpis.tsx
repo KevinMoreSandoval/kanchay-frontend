@@ -1,11 +1,22 @@
-import { CalendarDays, CheckCircle2, CircleX, Clock3 } from 'lucide-react';
+import {
+  CalendarDays,
+  CalendarClock,
+  CheckCircle2,
+  CircleX,
+  Clock3,
+  Hourglass,
+  XCircle,
+} from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 export interface ReceptionKpiCounts {
   total: number;
+  pending: number;
+  upcoming: number;
   inProgress: number;
   completed: number;
   noShow: number;
+  canceled: number;
 }
 
 export interface ReceptionKpisProps {
@@ -18,35 +29,42 @@ export function ReceptionKpis({ counts }: ReceptionKpisProps) {
       label: 'Reservas del día',
       value: counts.total,
       Icon: CalendarDays,
-      bg: 'bg-emerald-50 border-emerald-100',
-      text: 'text-emerald-600',
+    },
+    {
+      label: 'Pendientes de confirmación',
+      value: counts.pending,
+      Icon: Hourglass,
+    },
+    {
+      label: 'Próximas',
+      value: counts.upcoming,
+      Icon: CalendarClock,
     },
     {
       label: 'En curso',
       value: counts.inProgress,
       Icon: Clock3,
-      bg: 'bg-purple-50 border-purple-100',
-      text: 'text-purple-600',
     },
     {
       label: 'Finalizadas',
       value: counts.completed,
       Icon: CheckCircle2,
-      bg: 'bg-blue-50 border-blue-100',
-      text: 'text-blue-600',
     },
     {
       label: 'No asistieron',
       value: counts.noShow,
       Icon: CircleX,
-      bg: 'bg-rose-50 border-rose-100',
-      text: 'text-rose-600',
+    },
+    {
+      label: 'Canceladas',
+      value: counts.canceled,
+      Icon: XCircle,
     },
   ];
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {cards.map(({ label, value, Icon, bg, text }) => (
+      {cards.map(({ label, value, Icon }) => (
         <Card key={label} className="hover:shadow-md transition-shadow">
           <CardContent className="p-5 flex items-center justify-between">
             <div className="space-y-1">
@@ -57,7 +75,7 @@ export function ReceptionKpis({ counts }: ReceptionKpisProps) {
                 {value}
               </span>
             </div>
-            <div className={`p-3 rounded-xl border ${bg} ${text}`}>
+            <div className="p-3 rounded-xl border border-primary/20 bg-primary/10 text-primary">
               <Icon className="h-6 w-6" aria-hidden="true" />
             </div>
           </CardContent>

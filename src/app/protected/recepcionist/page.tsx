@@ -1,5 +1,6 @@
 import { CalendarDays, LayoutDashboard, Search, Users } from 'lucide-react';
 import { Sidebar, type SidebarItem } from '@/components/sidebar';
+import { Input, Label } from '@/components/ui';
 import { ReceptionTopbar } from './components/reception-topbar';
 import { ReceptionKpis } from './components/reception-kpis';
 import { ReservationsTable } from './components/reservations-table';
@@ -24,9 +25,10 @@ export default function ReceptionDashboard({ user, onLogout }: ReceptionDashboar
     search,
     setSearch,
     query,
-    localDate,
+    selectedDate,
+    setSelectedDate,
     visibleReservations,
-    todayReservations,
+    dateReservations,
     upcoming,
     activity,
     counts,
@@ -59,8 +61,15 @@ export default function ReceptionDashboard({ user, onLogout }: ReceptionDashboar
             </div>
             {activeSection === 'dashboard' && (
               <div className="flex flex-col gap-2 sm:items-end">
-                <div className="text-xs font-semibold text-muted-foreground bg-muted px-3 py-1.5 rounded-lg border border-border w-fit">
-                  Fecha: {localDate}
+                <div className="w-full space-y-1 sm:w-80">
+                  <Label htmlFor="reception-date">Fecha del dashboard</Label>
+                  <Input
+                    id="reception-date"
+                    type="date"
+                    required
+                    value={selectedDate}
+                    onChange={(event) => setSelectedDate(event.target.value)}
+                  />
                 </div>
                 <div className="relative w-full sm:w-80">
                   <Search
@@ -71,8 +80,8 @@ export default function ReceptionDashboard({ user, onLogout }: ReceptionDashboar
                     type="search"
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Buscar reservas del día..."
-                    aria-label="Buscar reservas del día por cliente o cancha"
+                    placeholder="Buscar por cliente o cancha..."
+                    aria-label="Buscar reservas de la fecha seleccionada por cliente o cancha"
                     className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors"
                   />
                 </div>
@@ -87,7 +96,7 @@ export default function ReceptionDashboard({ user, onLogout }: ReceptionDashboar
               <p className="text-xs font-semibold text-muted-foreground" aria-live="polite">
                 {query
                   ? `${visibleReservations.length} reservas coinciden con la búsqueda "${search}".`
-                  : `${todayReservations.length} reservas registradas para hoy.`}
+                  : `${dateReservations.length} reservas registradas para la fecha seleccionada.`}
               </p>
 
               <section className="space-y-3" aria-labelledby="upcoming-heading">
@@ -97,7 +106,7 @@ export default function ReceptionDashboard({ user, onLogout }: ReceptionDashboar
                       Próximas por atender
                     </h2>
                     <p className="text-xs text-muted-foreground">
-                      Reservas confirmadas y pendientes para el día de hoy
+                      Reservas confirmadas y pendientes con inicio futuro en la fecha seleccionada
                     </p>
                   </div>
                   <span className="text-xs font-bold bg-primary/10 text-primary px-2.5 py-1 rounded-full">
@@ -110,8 +119,8 @@ export default function ReceptionDashboard({ user, onLogout }: ReceptionDashboar
                   emptyTitle="Todo al día"
                   emptyMessage={
                     query
-                      ? 'No hay reservas pendientes que coincidan con la búsqueda.'
-                      : 'No hay reservas pendientes por atender en este momento.'
+                      ? 'No hay próximas reservas que coincidan con la búsqueda en la fecha seleccionada.'
+                      : 'No hay reservas con inicio futuro por atender en la fecha seleccionada.'
                   }
                 />
               </section>
@@ -132,11 +141,11 @@ export default function ReceptionDashboard({ user, onLogout }: ReceptionDashboar
                 <ReservationsTable
                   rows={activity}
                   caption="Actividad de reservas del día"
-                  emptyTitle="Sin actividad todavía"
+                  emptyTitle="Sin actividad registrada"
                   emptyMessage={
                     query
-                      ? 'No hay registros de actividad que coincidan con la búsqueda.'
-                      : 'La actividad del día aparecerá aquí conforme avancen los horarios.'
+                      ? 'No hay registros de actividad que coincidan con la búsqueda en la fecha seleccionada.'
+                      : 'No hay actividad registrada para la fecha seleccionada.'
                   }
                 />
               </section>
