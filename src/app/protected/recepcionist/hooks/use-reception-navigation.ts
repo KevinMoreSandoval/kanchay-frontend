@@ -10,12 +10,21 @@ const sectionHrefs: Record<ReceptionSection, string> = {
 
 export function useReceptionNavigation() {
   const [activeSection, setActiveSection] = useState<ReceptionSection>('dashboard');
+  const [isCreatingReservation, setIsCreatingReservation] = useState(false);
 
   const navigate = (href: string) => {
+    setIsCreatingReservation(false);
     if (href === sectionHrefs.dashboard) setActiveSection('dashboard');
     else if (href === sectionHrefs.reservas) setActiveSection('reservas');
     else if (href === sectionHrefs.clientes) setActiveSection('clientes');
   };
 
-  return { activeSection, activeHref: sectionHrefs[activeSection], navigate };
+  return {
+    activeSection,
+    activeHref: sectionHrefs[activeSection],
+    navigate,
+    isCreatingReservation,
+    openNewReservation: () => setIsCreatingReservation(true),
+    backToReservations: () => setIsCreatingReservation(false),
+  };
 }

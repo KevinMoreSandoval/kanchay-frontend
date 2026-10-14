@@ -7,8 +7,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge, type BadgeProps } from '@/components/ui/badge';
-import type { Reservation, ReservationStatus } from '@/types';
+import { Badge } from '@/components/ui/badge';
+import type { Reservation } from '@/types';
+import { reservationStatusConfig } from '../reservation-status';
 
 export interface ReservationsTableProps {
   rows: Reservation[];
@@ -16,15 +17,6 @@ export interface ReservationsTableProps {
   emptyMessage: string;
   caption?: string;
 }
-
-const statusConfig: Record<ReservationStatus, { label: string; variant: BadgeProps['variant'] }> = {
-  PENDIENTE: { label: 'Pendiente', variant: 'warning' },
-  CONFIRMADA: { label: 'Confirmada', variant: 'success' },
-  EN_CURSO: { label: 'En curso', variant: 'info' },
-  FINALIZADA: { label: 'Finalizada', variant: 'secondary' },
-  NO_ASISTIO: { label: 'No asistió', variant: 'destructive' },
-  CANCELADA: { label: 'Cancelada', variant: 'outline' },
-};
 
 export function ReservationsTable({
   rows,
@@ -61,7 +53,10 @@ export function ReservationsTable({
         </TableHeader>
         <TableBody>
           {rows.map((row) => {
-            const status = statusConfig[row.estado] || { label: row.estado, variant: 'secondary' };
+            const status = reservationStatusConfig[row.estado] || {
+              label: row.estado,
+              variant: 'secondary',
+            };
 
             return (
               <TableRow key={row.id}>
