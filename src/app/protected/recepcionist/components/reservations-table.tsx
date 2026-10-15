@@ -1,3 +1,14 @@
+import { lazy, Suspense } from 'react';
+import { Button } from '@/components/ui/button';
+const ReservationActionsMenu = lazy(() =>
+  import('./reservation-actions-menu').then((module) => ({
+    default: module.ReservationActionsMenu,
+  }))
+);
+import {
+  getAvailableReservationActions,
+  type ReservationAction,
+} from '@/services/reservation-service';
 import { ClipboardList } from 'lucide-react';
 import {
   Table,
@@ -15,6 +26,8 @@ export interface ReservationsTableProps {
   emptyTitle: string;
   emptyMessage: string;
   caption?: string;
+  onAction?: (reservation: Reservation, action: ReservationAction) => void;
+  now?: number;
 }
 
 const statusConfig: Record<ReservationStatus, { label: string; variant: BadgeProps['variant'] }> = {
@@ -31,6 +44,8 @@ export function ReservationsTable({
   emptyTitle,
   emptyMessage,
   caption,
+  onAction,
+  now,
 }: ReservationsTableProps) {
   if (rows.length === 0) {
     return (
@@ -54,19 +69,25 @@ export function ReservationsTable({
           <TableRow>
             <TableHead>Cliente</TableHead>
             <TableHead>Cancha</TableHead>
+            <TableHead>Fecha</TableHead>
             <TableHead>Horario</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead className="text-right">Monto</TableHead>
+            {onAction && <TableHead className="text-right">Acciones</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((row) => {
+            const actions = onAction ? getAvailableReservationActions(row, now) : [];
             const status = statusConfig[row.estado] || { label: row.estado, variant: 'secondary' };
 
             return (
               <TableRow key={row.id}>
                 <TableCell className="font-semibold text-foreground">{row.cliente}</TableCell>
                 <TableCell className="text-muted-foreground">{row.cancha}</TableCell>
+                <TableCell className="whitespace-nowrap text-muted-foreground">
+                  {row.fecha.split('-').reverse().join('/')}
+                </TableCell>
                 <TableCell className="text-muted-foreground font-mono text-xs">
                   {row.horaInicio} – {row.horaFin}
                 </TableCell>
@@ -75,7 +96,43 @@ export function ReservationsTable({
                 </TableCell>
                 <TableCell className="text-right font-semibold text-foreground">
                   S/ {row.monto.toFixed(2)}
+                  {onAction && (
+                    <p className="mt-1 text-xs font-normal text-muted-foreground">
+                      {
+                        {
+                          PENDIENTE: 'Pago pendiente',
+                          PAGADO: 'Pagado',
+                          POR_REEMBOLSAR: 'Por reembolsar',
+                          REEMBOLSADO: 'Reembolsado',
+                        }[row.paymentStatus ?? 'PENDIENTE']
+                      }
+                    </p>
+                  )}
                 </TableCell>
+                {onAction && (
+                  <TableCell className="text-right">
+                    {actions.length ? (
+                      <Suspense
+                        fallback={
+                          <Button size="sm" variant="outline" disabled>
+                            Acciones
+                          </Button>
+                        }
+                      >
+                        <ReservationActionsMenu
+                          reservationId={row.id}
+                          client={row.cliente}
+                          actions={actions}
+                          onSelect={(action) => onAction(row, action)}
+                        />
+                      </Suspense>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        Sin acciones disponibles
+                      </span>
+                    )}
+                  </TableCell>
+                )}
               </TableRow>
             );
           })}

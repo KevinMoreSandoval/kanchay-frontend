@@ -3,6 +3,7 @@ import { getReservations, getTodayDateString } from '@/services/local-data-servi
 import type { Reservation } from '@/types';
 
 export function useReceptionDashboard() {
+  const [activeSection, setActiveSection] = useState('/recepcionista');
   const [search, setSearch] = useState<string>('');
   const [reservations, setReservations] = useState<Reservation[]>(getReservations);
 
@@ -59,6 +60,8 @@ export function useReceptionDashboard() {
   );
 
   return {
+    activeSection,
+    setActiveSection,
     search,
     setSearch,
     query,
