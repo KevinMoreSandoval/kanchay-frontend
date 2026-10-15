@@ -6,6 +6,8 @@ const SESSION_KEY = 'kanchaya.session';
 const PASSWORD_HASH_ITERATIONS = 120_000;
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ACCOUNT_SAVE_ERROR =
+  'No se pudo guardar la cuenta porque uno o más datos no están disponibles para este registro. Verifica la información ingresada e inténtalo nuevamente.';
 
 const FIXED_ACCOUNTS: Record<
   string,
@@ -79,7 +81,7 @@ export async function saveManagedUser(data: ManagedUserData): Promise<User[]> {
     Object.hasOwn(FIXED_ACCOUNTS, email) ||
     users.some((item) => item.id !== data.id && item.email === email)
   ) {
-    throw new Error('Ya existe una cuenta con ese correo electrónico.');
+    throw new Error(ACCOUNT_SAVE_ERROR);
   }
   if (dni && !/^\d{8}$/.test(dni)) {
     throw new Error('El DNI debe tener 8 dígitos.');
@@ -88,7 +90,7 @@ export async function saveManagedUser(data: ManagedUserData): Promise<User[]> {
     throw new Error('El DNI no se puede modificar después de crear el usuario.');
   }
   if (dni && users.some((item) => item.id !== data.id && item.dni === dni)) {
-    throw new Error('Ya existe una cuenta con ese DNI.');
+    throw new Error(ACCOUNT_SAVE_ERROR);
   }
 
   const isNewUser = !existingUser;
@@ -214,15 +216,15 @@ export async function registerUser(userData: RegisterUserData): Promise<AuthSess
   const users = getUsers();
 
   if (FIXED_ACCOUNTS[email]) {
-    throw new Error('Este correo está reservado para el acceso de personal.');
+    throw new Error(ACCOUNT_SAVE_ERROR);
   }
 
   if (users.some((user) => user.email === email)) {
-    throw new Error('Ya existe una cuenta con ese correo electrónico.');
+    throw new Error(ACCOUNT_SAVE_ERROR);
   }
 
   if (users.some((user) => user.dni === userData.dni)) {
-    throw new Error('Ya existe una cuenta con ese DNI.');
+    throw new Error(ACCOUNT_SAVE_ERROR);
   }
 
   const salt = crypto.getRandomValues(new Uint8Array(16));

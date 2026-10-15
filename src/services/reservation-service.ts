@@ -1,3 +1,4 @@
+import { getRegisteredUsers } from './auth-service';
 import { getManagedCourts } from './court-draft-service';
 import {
   getReservations,
@@ -111,6 +112,14 @@ function assertScheduleAvailable(
   reservations: Reservation[],
   now = Date.now()
 ): void {
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(schedule.date) ||
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(schedule.startTime) ||
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(schedule.endTime) ||
+    new Date(`${schedule.date}T12:00:00`).toLocaleDateString('sv-SE') !== schedule.date
+  ) {
+    throw new Error('Ingresa una fecha y horas válidas.');
+  }
   const start = parseSchedule(schedule.date, schedule.startTime);
   const end = parseSchedule(schedule.date, schedule.endTime);
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
@@ -207,14 +216,23 @@ export function rescheduleReservation(
 export type CreateReservationData = Omit<
   Reservation,
   'id' | 'estado' | 'createdAt' | 'paymentStatus' | 'scheduleChanges' | 'attendedAt' | 'canceledAt'
-> & { courtId: number };
+> & { courtId: number; userId: string };
 
-export function createReservation(data: CreateReservationData, now = Date.now()): Reservation[] {
+export function validateReservationCreation(
+  data: CreateReservationData,
+  now = Date.now()
+): Reservation {
+  const user = getRegisteredUsers().find((item) => item.id === data.userId);
+  if (!user || user.role !== 'Cliente') {
+    throw new Error('Selecciona un cliente registrado antes de crear la reserva.');
+  }
   const reservations = getReservations();
   const reservation: Reservation = {
     ...data,
     id: reservations.reduce((maxId, item) => Math.max(maxId, item.id), 0) + 1,
-    cliente: data.cliente.trim(),
+    userId: user.id,
+    user,
+    cliente: `${user.firstName} ${user.lastName}`.trim(),
     cancha: data.cancha.trim(),
     observaciones: data.observaciones?.trim() || undefined,
     estado: 'PENDIENTE',
@@ -229,7 +247,10 @@ export function createReservation(data: CreateReservationData, now = Date.now())
   if (!Number.isFinite(reservation.monto) || reservation.monto <= 0) {
     throw new Error('El monto de la reserva debe ser mayor a cero.');
   }
-  if (!reservation.paymentMethod) {
+  if (
+    !reservation.paymentMethod ||
+    !['EFECTIVO', 'TARJETA', 'TRANSFERENCIA', 'YAPE_PLIN'].includes(reservation.paymentMethod)
+  ) {
     throw new Error('Selecciona un método de pago.');
   }
 
@@ -244,7 +265,12 @@ export function createReservation(data: CreateReservationData, now = Date.now())
     now
   );
 
-  return saveReservations([...reservations, reservation]);
+  return reservation;
+}
+
+export function createReservation(data: CreateReservationData, now = Date.now()): Reservation[] {
+  const reservation = validateReservationCreation(data, now);
+  return saveReservations([...getReservations(), reservation]);
 }
 
 export { updateReservationPaymentStatus, updateReservationSurchargePayment };
@@ -255,4 +281,52 @@ export function getReservationStartTimestamp(reservation: Reservation): number {
 
 export function getReservationEndTimestamp(reservation: Reservation): number {
   return getReservationEnd(reservation);
+}
+
+export type ReservationActionType =
+  'confirm' | 'attendance' | 'cancel' | 'reschedule' | 'pay' | 'refund' | 'surcharge';
+export interface ReservationAction {
+  id: string;
+  type: ReservationActionType;
+  label: string;
+  surchargeIndex?: number;
+}
+
+export function getAvailableReservationActions(
+  reservation: Reservation,
+  now = Date.now()
+): ReservationAction[] {
+  const actions: ReservationAction[] = [];
+  const active = ['PENDIENTE', 'CONFIRMADA'].includes(reservation.estado);
+  const createdAt = reservation.createdAt ? new Date(reservation.createdAt).getTime() : NaN;
+  const expired =
+    reservation.estado === 'PENDIENTE' &&
+    Number.isFinite(createdAt) &&
+    now > createdAt + PENDING_CONFIRMATION_WINDOW_MS;
+  if (reservation.estado === 'PENDIENTE' && !expired)
+    actions.push({ id: 'confirm', type: 'confirm', label: 'Confirmar reserva' });
+  if (
+    reservation.estado === 'CONFIRMADA' &&
+    now >= getReservationStart(reservation) - 15 * 60 * 1000 &&
+    now < getReservationEnd(reservation)
+  )
+    actions.push({ id: 'attendance', type: 'attendance', label: 'Registrar asistencia' });
+  if (active && !expired && now <= getReservationStart(reservation) - CANCELLATION_CUTOFF_MS)
+    actions.push({ id: 'cancel', type: 'cancel', label: 'Cancelar reserva' });
+  if (active && !expired)
+    actions.push({ id: 'reschedule', type: 'reschedule', label: 'Reprogramar reserva' });
+  if (reservation.paymentStatus === 'PENDIENTE' && reservation.estado !== 'CANCELADA' && !expired)
+    actions.push({ id: 'pay', type: 'pay', label: 'Registrar pago base' });
+  if (reservation.paymentStatus === 'POR_REEMBOLSAR')
+    actions.push({ id: 'refund', type: 'refund', label: 'Completar reembolso' });
+  reservation.scheduleChanges?.forEach((change, index) => {
+    if (change.surchargePaymentStatus === 'PENDIENTE')
+      actions.push({
+        id: `surcharge-${index}`,
+        type: 'surcharge',
+        label: `Cobrar recargo ${index + 1} · S/ ${change.surcharge.toFixed(2)}`,
+        surchargeIndex: index,
+      });
+  });
+  return actions;
 }
