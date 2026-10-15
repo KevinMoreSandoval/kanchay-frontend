@@ -1,5 +1,3 @@
-// Stepper visual de progreso para el formulario de creación de canchas
-
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -8,12 +6,12 @@ export interface StepperStep {
   description: string;
 }
 
-export interface CourtStepperProps {
+export interface FormStepperProps {
   steps: StepperStep[];
   currentStep: number;
 }
 
-export function CourtStepper({ steps, currentStep }: CourtStepperProps) {
+export function FormStepper({ steps, currentStep }: FormStepperProps) {
   return (
     <nav aria-label="Progreso del formulario" className="w-full">
       <ol className="flex items-start gap-0">
@@ -22,7 +20,11 @@ export function CourtStepper({ steps, currentStep }: CourtStepperProps) {
           const isActive = idx === currentStep;
 
           return (
-            <li key={step.label} className="flex-1 flex flex-col items-center relative">
+            <li
+              key={step.label}
+              aria-label={`${step.label}: ${step.description}`}
+              className="flex-1 flex flex-col items-center relative"
+            >
               {/* Línea de conexión izquierda */}
               {idx > 0 && (
                 <div
