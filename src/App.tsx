@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useAuth } from './hooks/use-auth';
 import LoginPage from './app/auth/login/page';
 import RegisterPage from './app/auth/register/page';
 import ClientPage from './app/protected/client/page';
 import ReceptionDashboard from './app/protected/recepcionist/page';
-import AdminPage from './app/protected/admin/page';
+const AdminPage = lazy(() => import('./app/protected/admin/page'));
 import { Loading } from '@/components/ui';
 import type { UserRole, AuthSession } from '@/types';
 import type { LoginCredentials } from './services/auth-service';
@@ -89,7 +89,7 @@ export default function App() {
 
   return (
     <>
-      {page}
+      <Suspense fallback={<Loading label="Cargando módulo..." />}>{page}</Suspense>
       {screenLoading && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 text-foreground backdrop-blur-sm">
           <Loading
