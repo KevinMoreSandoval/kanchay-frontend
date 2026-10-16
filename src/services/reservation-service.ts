@@ -234,7 +234,6 @@ export function validateReservationCreation(
     user,
     cliente: `${user.firstName} ${user.lastName}`.trim(),
     cancha: data.cancha.trim(),
-    observaciones: data.observaciones?.trim() || undefined,
     estado: 'PENDIENTE',
     createdAt: new Date(now).toISOString(),
     paymentStatus: 'PENDIENTE',
