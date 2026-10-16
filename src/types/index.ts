@@ -49,6 +49,8 @@ export interface ReservationScheduleChange {
 }
 
 export interface Reservation {
+  userId?: string;
+  user?: User;
   id: number;
   courtId?: number;
   cliente: string;

@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/table';
 import { AdminHeader } from './components/admin-header';
 import { AdminKpis } from './components/admin-kpis';
-import { CourtStepper } from './components/court-stepper';
+import { FormStepper } from '@/components';
 import { RecentUsersCard } from './components/recent-users-card';
 import { CourtsSummaryCard } from './components/courts-summary-card';
 import { UsersManagement } from './components/users-management';
@@ -378,7 +378,7 @@ export default function AdminPage({ user, onLogout }: AdminPageProps) {
                   </Badge>
                 </div>
 
-                <CourtStepper steps={courtSteps} currentStep={courtForm.step} />
+                <FormStepper steps={courtSteps} currentStep={courtForm.step} />
               </CardHeader>
 
               <CardContent className="space-y-6">
