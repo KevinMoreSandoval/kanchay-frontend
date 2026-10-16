@@ -66,8 +66,18 @@ function upsertCatalogCourt(court: CourtFormDraft): void {
     id: numericId,
     name: court.general.name.trim(),
     location: court.location.venue.trim(),
+    description: court.general.description.trim(),
+    address: court.location.address.trim(),
+    reference: court.location.reference.trim(),
+    schedule: court.location.schedule.map(({ day, opens, closes, isOpen }) => ({
+      day,
+      opens,
+      closes,
+      isOpen,
+    })),
     price: Number(court.features.promotionalPrice || court.features.pricePerHour),
     image: court.general.photos[0]?.src,
+    images: court.general.photos.map((photo) => photo.src),
     features: [
       court.general.sport,
       `${court.features.capacity} jugadores`,

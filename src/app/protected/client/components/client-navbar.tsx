@@ -1,6 +1,6 @@
 // src/app/protected/client/components/client-navbar.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { LogOut, Ticket, ChevronDown, Trophy } from 'lucide-react';
+import { LogOut, Ticket, ChevronDown } from 'lucide-react';
 import type { User, Reservation } from '@/types';
 import { getReservations } from '@/services/local-data-service';
 
@@ -48,20 +48,20 @@ export const ClientNavbar: React.FC<ClientNavbarProps> = ({
   const fullName = `${user?.firstName || 'Anthony'} ${user?.lastName || 'Landa'}`.trim();
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-100 bg-white/95 backdrop-blur-md">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-100 bg-white/95 shadow-sm backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Logo CanchaYa */}
         <button
           type="button"
           onClick={onGoHome}
-          className="flex items-center gap-2 cursor-pointer group focus:outline-none"
+          aria-label="CanchaYa, ir al inicio"
+          className="group flex cursor-pointer items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         >
-          <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
-            <Trophy className="w-5 h-5" />
-          </div>
-          <span className="text-xl font-black text-slate-900 tracking-tight">
-            cancha<span className="text-blue-600">YA</span>
-          </span>
+          <img
+            src="/assets/img/logo-court.png"
+            alt="CanchaYa"
+            className="h-11 w-20 object-contain transition-transform group-hover:scale-105"
+          />
         </button>
 
         {/* Menú de Usuario */}

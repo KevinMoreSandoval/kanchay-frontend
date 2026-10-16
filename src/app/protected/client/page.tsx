@@ -1,17 +1,18 @@
 // src/app/protected/client/page.tsx
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { SearchX, Trophy } from 'lucide-react';
 import { ClientNavbar } from './components/client-navbar';
 import { ClientHero } from './components/client-hero';
 import { CourtCard } from './components/court-card';
-import { CourtDetailsModal } from './components/court-details-modal';
+import { CourtDetailsScreen } from './components/court-details-screen';
 import { AvailabilityStep } from './components/availability-step';
 import { ConfirmationStep } from './components/confirmation-step';
 import { ReservationSummaryStep } from './components/reservation-summary-step';
 import { MyReservationsList } from './components/my-reservations-list';
 import { useCourtsCatalog } from './hooks/use-courts-catalog';
-import { getReservations, saveReservation } from '@/services/local-data-service';
-import type { User, Reservation } from '@/types';
+import { createReservation } from '@/services/reservation-service';
+import { getReservations } from '@/services/local-data-service';
+import type { User, Reservation, PaymentMethod } from '@/types';
 
 export interface ClientPageProps {
   user?: User | null;
@@ -24,7 +25,17 @@ export default function ClientPage({ user, onLogout }: ClientPageProps) {
     'availability' | 'confirmation' | 'summary'
   >('availability');
   const [completedReservation, setCompletedReservation] = useState<Reservation | null>(null);
-  const [userReservations, setUserReservations] = useState<Reservation[]>(getReservations);
+  const [reservationError, setReservationError] = useState<string | null>(null);
+
+  /** Reservas del usuario actual */
+  const getUserReservations = useCallback((): Reservation[] => {
+    const all = getReservations();
+    const userId = user?.id;
+    if (!userId) return [];
+    return all.filter((r) => r.userId === userId);
+  }, [user]);
+
+  const [userReservations, setUserReservations] = useState<Reservation[]>(getUserReservations);
 
   const {
     searchTerm,
@@ -34,7 +45,7 @@ export default function ClientPage({ user, onLogout }: ClientPageProps) {
     setSelectedCourt,
     reservingCourt,
     selectedDate,
-    setSelectedDate,
+    handleDateChange,
     availableSlots,
     selectedSlots,
     totalAmount,
@@ -47,51 +58,60 @@ export default function ClientPage({ user, onLogout }: ClientPageProps) {
   } = useCourtsCatalog();
 
   const handleOpenMyReservations = () => {
-    setUserReservations(getReservations());
+    setUserReservations(getUserReservations());
     setViewMode('my-reservations');
     closeReservationFlow();
+    setReservationError(null);
   };
 
-  const handleConfirmReservation = (paymentMethod: string) => {
-    if (!reservingCourt || selectedSlots.length === 0) return;
+  const handleConfirmReservation = (paymentMethod: PaymentMethod) => {
+    if (!reservingCourt || selectedSlots.length === 0 || !user?.id) return;
 
-    // Objeto de reserva con aserción segura para evitar incompatibilidades de tipo
-    const newReservation = {
-      id: Date.now(),
-      code: `CY-${Math.floor(10000 + Math.random() * 90000)}`,
-      courtId: reservingCourt.id,
-      courtName: reservingCourt.name,
-      establishmentName: 'Sede San Miguel',
-      location: reservingCourt.location || 'Av. La Marina 2345, San Miguel',
-      sportType: reservingCourt.features?.[0] || 'Fútbol',
-      date: selectedDate,
-      timeSlots: selectedSlots.map((slot) => ({
-        startTime: slot.startTime,
-        endTime: slot.endTime,
-        price: slot.price,
-      })),
-      totalAmount,
-      totalPrice: totalAmount,
-      status: 'CONFIRMADA',
-      paymentStatus: 'PAGADO',
-      paymentMethod,
-      createdAt: new Date().toISOString(),
-      holderInfo: {
-        fullName: user?.firstName
-          ? `${user.firstName} ${user.lastName || ''}`.trim()
-          : 'Anthony Landa',
-        email: user?.email || 'anthony@canchaya.com',
-      },
-    } as unknown as Reservation;
+    setReservationError(null);
 
-    // Guardar en el almacenamiento de localStorage
-    saveReservation(newReservation);
+    // Calcular horaInicio y horaFin a partir de los slots seleccionados (ordenados)
+    const sorted = [...selectedSlots].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    const horaInicio = sorted[0].startTime;
+    const horaFin = sorted[sorted.length - 1].endTime;
+    const monto = totalAmount;
+    const cliente = `${user.firstName} ${user.lastName || ''}`.trim();
 
-    // Actualizar estados
-    setUserReservations(getReservations());
-    setCompletedReservation(newReservation);
-    setReservationStep('summary');
+    try {
+      const allReservations = createReservation({
+        userId: user.id,
+        courtId: reservingCourt.id,
+        cancha: reservingCourt.name,
+        cliente,
+        fecha: selectedDate,
+        horaInicio,
+        horaFin,
+        monto,
+        paymentMethod,
+        observaciones: undefined,
+      });
+
+      // La reserva recién creada es la última en la lista
+      const created = allReservations[allReservations.length - 1];
+      setUserReservations(allReservations.filter((r) => r.userId === user.id));
+      setCompletedReservation(created);
+      setReservationStep('summary');
+    } catch (err) {
+      setReservationError(err instanceof Error ? err.message : 'No se pudo crear la reserva.');
+    }
   };
+
+  if (viewMode === 'catalog' && selectedCourt && !reservingCourt) {
+    return (
+      <CourtDetailsScreen
+        court={selectedCourt}
+        onBack={() => setSelectedCourt(null)}
+        onSelectAvailability={() => {
+          handleReserve(selectedCourt.id);
+          setReservationStep('availability');
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -103,6 +123,7 @@ export default function ClientPage({ user, onLogout }: ClientPageProps) {
           setViewMode('catalog');
           setReservationStep('availability');
           closeReservationFlow();
+          setReservationError(null);
         }}
       />
 
@@ -138,6 +159,22 @@ export default function ClientPage({ user, onLogout }: ClientPageProps) {
               </div>
             )}
 
+            {reservationError && (
+              <div
+                role="alert"
+                className="p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-sm font-semibold flex items-center justify-between animate-in fade-in"
+              >
+                <span>{reservationError}</span>
+                <button
+                  type="button"
+                  onClick={() => setReservationError(null)}
+                  className="text-xs hover:underline cursor-pointer ml-4 font-bold"
+                >
+                  Cerrar
+                </button>
+              </div>
+            )}
+
             {/* Flujo de Reserva */}
             {reservingCourt ? (
               <div className="space-y-6">
@@ -145,7 +182,7 @@ export default function ClientPage({ user, onLogout }: ClientPageProps) {
                   <AvailabilityStep
                     court={reservingCourt}
                     selectedDate={selectedDate}
-                    onDateChange={setSelectedDate}
+                    onDateChange={handleDateChange}
                     availableSlots={availableSlots}
                     selectedSlots={selectedSlots}
                     onToggleSlot={handleToggleSlot}
@@ -161,7 +198,6 @@ export default function ClientPage({ user, onLogout }: ClientPageProps) {
                     selectedDate={selectedDate}
                     selectedSlots={selectedSlots}
                     totalAmount={totalAmount}
-                    currentUser={user}
                     onBack={() => setReservationStep('availability')}
                     onConfirm={handleConfirmReservation}
                   />
@@ -170,6 +206,7 @@ export default function ClientPage({ user, onLogout }: ClientPageProps) {
                 {reservationStep === 'summary' && completedReservation && (
                   <ReservationSummaryStep
                     reservation={completedReservation}
+                    selectedSlots={selectedSlots}
                     onGoHome={() => {
                       closeReservationFlow();
                       setReservationStep('availability');
@@ -238,18 +275,6 @@ export default function ClientPage({ user, onLogout }: ClientPageProps) {
           </>
         )}
       </main>
-
-      {/* Modal de Detalles */}
-      {selectedCourt && (
-        <CourtDetailsModal
-          court={selectedCourt}
-          onClose={() => setSelectedCourt(null)}
-          onSelectAvailability={() => {
-            handleReserve(selectedCourt.id);
-            setReservationStep('availability');
-          }}
-        />
-      )}
     </div>
   );
 }

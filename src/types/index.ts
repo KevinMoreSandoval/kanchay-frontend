@@ -21,12 +21,25 @@ export interface AuthSession {
   user: User;
 }
 
+export interface CourtScheduleEntry {
+  day: string;
+  opens: string;
+  closes: string;
+  isOpen: boolean;
+}
+
 export interface Court {
   id: number;
   name: string;
   location: string;
+  description?: string;
+  address?: string;
+  reference?: string;
+  mapUrl?: string;
+  schedule?: CourtScheduleEntry[];
   price: number;
   image?: string;
+  images?: string[];
   features: string[];
 }
 
