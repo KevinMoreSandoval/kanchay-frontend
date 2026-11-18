@@ -10,7 +10,7 @@ CanchaYa es una plataforma frontend de reservas deportivas en español. El stack
 - **Componentes:** Componentes atómicos estructurados según los patrones de shadcn/ui con `class-variance-authority` (`cva`), `clsx` y `tailwind-merge` (`cn`).
 - **Iconos:** `lucide-react`.
 - **Identidad visual:** Color primario `#155DFC` (`--primary`), tipografía Lato.
-- **Persistencia:** Almacenamiento local mediante `localStorage` gestionado exclusivamente a través de la capa de servicios (`src/services/`). No hay backend, clientes HTTP ni dependencias de red externas por el momento.
+- **Persistencia:** Autenticación, usuarios de administración y canchas usan el backend a través de servicios HTTP. La sesión se restaura desde una cookie HttpOnly y el JWT vive en memoria; los borradores de canchas solo viven en memoria. Reservas y clientes de recepción también se consultan y guardan mediante el API. Ningún flujo usa almacenamiento persistente del navegador.
 
 ---
 
@@ -38,9 +38,9 @@ src/
 │   ├── use-auth.ts                  # Hook global de sesión y autenticación
 │   └── index.ts
 ├── services/                        # Capa transversal de servicios y persistencia
-│   ├── auth-service.ts              # Autenticación, registro y hashing local
-│   ├── local-data-service.ts        # Consulta y guardado de canchas y reservas
-│   ├── storage-service.ts           # Wrapper seguro tipado sobre localStorage
+│   ├── auth-service.ts              # Autenticación, registro y restauración desde el API
+│   ├── reservations/                # Contratos, mapeo y solicitudes de reservas
+│   ├── clients/                     # Consulta y alta de clientes por HTTP
 │   └── index.ts
 ├── types/                           # Tipos e interfaces globales de dominio
 │   └── index.ts                     # User, Court, Reservation, AuthSession, etc.
@@ -144,30 +144,40 @@ Los flujos públicos van en `src/app/auth/` y los flujos protegidos en `src/app/
 5. **Manejo de Feedback:**
    - **Prohibido el uso de `window.alert()`**.
    - No dejar botones con funciones vacías o que solo hagan `console.log()`. Toda acción interactiva debe brindar retroalimentación visual en pantalla (alertas accesibles con `role="status"` o `role="alert"`, modales o badges).
+   - Los mensajes transitorios de éxito, error, información y advertencia pasan por `toast` de `src/services/toast-service.ts`. No añadir banners duplicados en las páginas. `Toaster` se monta una sola vez junto a `App` en `main.tsx` y mantiene las notificaciones al navegar y dentro de diálogos nativos.
+   - Llamar a `toast.success/error/info/warning` después de la acción o en su catch, nunca durante el render. `notifyToast` conserva el texto cuando además se necesita un estado para controlar formularios o reintentos. Las validaciones por campo, estados de carga, estados vacíos y confirmaciones permanecen junto a su contexto.
 
 ---
 
 ## Persistencia y Servicios
 
-- La persistencia se maneja exclusivamente en `localStorage` a través de los servicios centralizados en `src/services/` (`auth-service.ts`, `local-data-service.ts`, `storage-service.ts`).
-- Las páginas y componentes de los flujos **nunca deben leer ni escribir directamente en `localStorage`**.
-- No introducir clientes HTTP (`fetch`, `axios`), variables de URL de backend ni llamadas de red externas mientras el proyecto se mantenga en modo local.
+- Toda persistencia y comunicación con el backend pasa por los servicios de `src/services/`.
+- Despliegue: Vercel usa `/backend` como base del API y un rewrite externo a Render antes del fallback SPA; no cachear respuestas de negocio. La cookie del perfil `prod` del backend usa Path `/backend/auth`, HttpOnly, Secure y SameSite=Strict. Desarrollo sigue usando `http://localhost:8080` y Path `/auth`. Consultar `DEPLOYMENT.md` antes de cambiar el proxy o las variables.
+- Reutilizar `src/lib/validation.ts` y `use-form-validation` para identidad, fechas y horarios; conservar las reglas específicas en el `validations.ts` de cada feature. La misma validación debe controlar los errores por campo, `disabled` y el envío. Bloquear guardados inválidos, sin cambios o en curso; validar también en el backend las restricciones de los datos.
+- **Ningún módulo debe leer ni escribir `localStorage`, `sessionStorage` ni IndexedDB.** Los registros viven en MySQL; React conserva únicamente snapshots del API y formularios temporales en memoria.
+- Login y registro están conectados al backend: usar `http-client.ts`, `auth-service.ts`, `auth-contracts.ts` y `session-service.ts`. La URL se configura con `VITE_API_URL`. No autenticar con usuarios ni contraseñas locales. La cookie HttpOnly de `/auth` restaura la sesión mediante GET `/auth/session`; las peticiones de negocio requieren Bearer en memoria. Logout elimina la cookie en el backend. La sincronización entre pestañas usa BroadcastChannel. No persistir sesiones ni usuarios de administración en almacenamiento del navegador.
+- Canchas usa `src/services/courts/`: contratos, adaptadores, CRUD HTTP y borradores en memoria separados. El tipo compartido vive en `src/types/courts.ts`; los componentes y hooks específicos viven en `admin/courts/` y `client/courts/`. No importar desde administración en servicios ni desde otros flujos.
+- Las fotos nuevas de canchas pasan por `court-image-service.ts` y `POST /canchas/imagenes` antes del alta o edición. MySQL solo recibe URLs; Base64 se limita a la previsualización y borradores en memoria. No establecer manualmente Content-Type para solicitudes FormData.
+- La creación, edición, cambio de estado, eliminación y subida de imágenes de canchas son exclusivas de ADMIN. El backend usa el rol vigente del usuario activo en la base de datos; el rol del JWT no debe mantener permisos anteriores a un cambio de rol.
+- Usuarios de administración usan `src/services/users/` (contratos, adaptadores y CRUD HTTP) y `admin/users/` (componentes y hooks). El backend replica las reglas del formulario: clientes con contraseña inicial DNI, personal con contraseña explícita, DNI inmutable y contraseña vacía conserva la actual. Solo ADMIN puede gestionar usuarios y la cuenta propia está protegida.
+- Clientes de recepción usan `src/services/clients/client-service.ts` y `/api/clientes`; reservas usan `src/services/reservations/` y `/api/reservas`. Los hooks compartidos `use-clients` y `use-reservations` recargan desde el servidor al mutar, enfocar y cada 30 segundos. Nunca crear identificadores ni registros de negocio en el navegador.
 
 ---
 
 ## Reservas y coordinación entre flujos
 
 - La entidad compartida `Reservation` de `src/types/index.ts` es el contrato único para cliente, recepción y administración. No crear modelos paralelos dentro de un flujo.
-- Toda lectura y escritura de reservas pasa por `src/services/local-data-service.ts`; las transiciones y reglas de negocio se aplican mediante `src/services/reservation-service.ts`. Nunca acceder directamente a `localStorage` desde páginas, componentes o hooks.
-- Una reserva registra cliente, cancha (`courtId` y nombre visible), fecha, horas de inicio y fin, estado, monto base, fecha de creación, método y estado de pago, observaciones y, cuando aplique, asistencia e historial de reprogramaciones. Los campos opcionales mantienen compatibilidad con datos locales anteriores; las nuevas reservas deben establecer `createdAt`, `courtId`, `paymentMethod` y `paymentStatus`.
-- El flujo de cliente debe permitir reservar solo canchas disponibles y horarios acordes con el horario semanal y sin solaparse con reservas activas. La reserva se persiste como `PENDIENTE` y pago `PENDIENTE` por el servicio compartido. No mostrar ni crear reservas de ejemplo.
+- Toda lectura y escritura de reservas pasa por `src/services/reservations/reservation-api.ts`; `src/services/reservation-service.ts` solo valida formularios y determina acciones visibles. Las reglas, importes, cruces, estados, pagos e historial se validan y persisten en `service/reserva/ReservaWorkflowService` del backend. Esperar el resultado HTTP antes de cerrar formularios o mostrar éxito.
+- Una reserva registra cliente, cancha (`courtId` y nombre visible), fecha, horas de inicio y fin, estado, monto base, fecha de creación, método y estado de pago, observaciones y, cuando aplique, asistencia e historial de reprogramaciones. Los campos opcionales mantienen compatibilidad con respuestas anteriores; las nuevas reservas deben establecer `createdAt`, `courtId`, `paymentMethod` y `paymentStatus`.
+- El horario de una cancha combina un rango `horaInicio`/`horaFin` y `diasDisponibles` (días ISO MONDAY–SUNDAY), seleccionados mediante switches. Un rango se aplica a todos los días habilitados; la lista vacía significa cerrado toda la semana. El frontend envía `horario` y consume intervalos JSON de `/canchas/{id}/slots?date=...`; nunca genera intervalos ni persiste un horario distinto por día. El servidor valida los días y rangos al crear o reprogramar. La reserva se guarda en MySQL como `PENDIENTE` y pago `PENDIENTE`; no mostrar ni crear reservas de ejemplo.
 - Una reserva `PENDIENTE` debe confirmarse dentro de los primeros 15 minutos desde `createdAt`; vencido ese plazo, el servicio la cambia automáticamente a `CANCELADA`.
+- Confirmar y registrar el pago base son la misma operación de negocio: ambos endpoints deben persistir `CONFIRMADA`, pago `PAGADO` y monto pagado completo en una única transacción. Mostrar una sola acción «Registrar pago y confirmar» después de recibir el dinero; bloquear vencidas, canceladas y estados terminales. Recargos y reembolsos mantienen operaciones independientes.
 - Transiciones permitidas: `PENDIENTE → CONFIRMADA | CANCELADA` y `CONFIRMADA → EN_CURSO | CANCELADA`. Al llegar la hora de fin, el servicio cambia a `FINALIZADA` si hay asistencia registrada o a `NO_ASISTIO` si no la hay. `CANCELADA`, `FINALIZADA` y `NO_ASISTIO` son estados terminales.
 - Recepción registra asistencia solo desde 15 minutos antes del inicio y hasta la hora de fin. Al marcarla, el estado pasa a `EN_CURSO`. Recepción y administración deben refrescar las transiciones automáticas y los cambios externos leyendo el mismo servicio; no duplicar el ciclo de vida en la interfaz.
 - La cancelación manual de reservas pendientes o confirmadas solo se permite hasta 2 horas antes del inicio. Si la reserva está pagada, cancelar cambia su pago a `POR_REEMBOLSAR`; completar el reembolso es una acción posterior que lo cambia a `REEMBOLSADO`.
 - Solo se reprograman reservas pendientes o confirmadas. Antes de cambiar fecha u horario, el servicio verifica la cancha, el horario de atención y que no haya solapamientos. Cada cambio conserva el horario anterior y el nuevo, añade un recargo del 15% del monto base y mantiene su cobro individual (`PENDIENTE` o `PAGADO`) sin alterar el pago base.
 - Los filtros y gráficos usan datos reales del servicio y respetan los filtros activos. Una exportación todavía no implementada debe identificarse como próxima funcionalidad; no simular una descarga PDF exitosa.
-- Al añadir estados de reserva o pago, actualizar las etiquetas y las vistas de recepción y administración. Validar las reglas en el servicio además de reflejarlas en la interfaz y proporcionar feedback accesible para cada acción.
+- Al añadir estados de reserva o pago, actualizar las etiquetas y las vistas de recepción y administración. Validar las reglas en el backend además de reflejarlas en la interfaz y proporcionar feedback accesible para cada acción.
 
 ## Validación Obligatoria del Código
 

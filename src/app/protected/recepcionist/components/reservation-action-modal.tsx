@@ -43,6 +43,7 @@ export function ReservationActionModal({ dialogRef, ...actions }: Actions) {
               variant="ghost"
               size="icon"
               aria-label="Cerrar acción de reserva"
+              disabled={actions.saving}
               onClick={actions.close}
             >
               <X aria-hidden="true" />
@@ -51,7 +52,10 @@ export function ReservationActionModal({ dialogRef, ...actions }: Actions) {
           {selected && (
             <CardContent className="flex min-h-0 flex-1 flex-col p-0">
               <form onSubmit={actions.submit} className="flex min-h-0 flex-1 flex-col">
-                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-6">
+                <fieldset
+                  disabled={actions.saving}
+                  className="min-h-0 flex-1 space-y-4 overflow-y-auto p-6"
+                >
                   <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-4">
                     <p className="text-xs text-muted-foreground">
                       Reserva #{selected.reservation.id}
@@ -97,6 +101,8 @@ export function ReservationActionModal({ dialogRef, ...actions }: Actions) {
                       <div className="grid gap-4 sm:grid-cols-2">
                         <FormField
                           id="reception-reschedule-date"
+                          error={actions.scheduleErrors.date}
+                          onBlur={() => actions.touchSchedule('date')}
                           label="Nueva fecha"
                           required
                           className="sm:col-span-2"
@@ -114,7 +120,13 @@ export function ReservationActionModal({ dialogRef, ...actions }: Actions) {
                             }
                           />
                         </FormField>
-                        <FormField id="reception-reschedule-start" label="Hora de inicio" required>
+                        <FormField
+                          id="reception-reschedule-start"
+                          error={actions.scheduleErrors.startTime}
+                          onBlur={() => actions.touchSchedule('startTime')}
+                          label="Hora de inicio"
+                          required
+                        >
                           <Input
                             id="reception-reschedule-start"
                             type="time"
@@ -128,7 +140,13 @@ export function ReservationActionModal({ dialogRef, ...actions }: Actions) {
                             }
                           />
                         </FormField>
-                        <FormField id="reception-reschedule-end" label="Hora de fin" required>
+                        <FormField
+                          id="reception-reschedule-end"
+                          error={actions.scheduleErrors.endTime}
+                          onBlur={() => actions.touchSchedule('endTime')}
+                          label="Hora de fin"
+                          required
+                        >
                           <Input
                             id="reception-reschedule-end"
                             type="time"
@@ -143,6 +161,11 @@ export function ReservationActionModal({ dialogRef, ...actions }: Actions) {
                           />
                         </FormField>
                       </div>
+                      {!actions.hasScheduleChanges && (
+                        <p className="text-sm text-muted-foreground">
+                          Cambia la fecha o el horario para habilitar la reprogramación.
+                        </p>
+                      )}
                     </>
                   )}
                   {selected.action.type === 'cancel' && (
@@ -155,8 +178,10 @@ export function ReservationActionModal({ dialogRef, ...actions }: Actions) {
                   )}
                   {selected.action.type === 'confirm' && (
                     <p className="text-sm text-muted-foreground">
-                      La reserva pasará a confirmada. Esta acción debe realizarse dentro de los
-                      primeros 15 minutos desde su creación.
+                      Registra el pago base completo de S/ {selected.reservation.monto.toFixed(2)}{' '}
+                      solo después de recibirlo. La reserva quedará pagada y confirmada en la misma
+                      operación, dentro de los primeros 15 minutos desde su creación. Los recargos
+                      se cobran por separado.
                     </p>
                   )}
                   {selected.action.type === 'attendance' && (
@@ -167,7 +192,8 @@ export function ReservationActionModal({ dialogRef, ...actions }: Actions) {
                   {selected.action.type === 'pay' && (
                     <p className="text-sm text-muted-foreground">
                       Registra el pago base de S/ {selected.reservation.monto.toFixed(2)} solo
-                      después de recibirlo. Los recargos se cobran por separado.
+                      después de recibirlo. La reserva quedará pagada y confirmada en la misma
+                      operación. Los recargos se cobran por separado.
                     </p>
                   )}
                   {selected.action.type === 'refund' && (
@@ -182,21 +208,19 @@ export function ReservationActionModal({ dialogRef, ...actions }: Actions) {
                       se modificará.
                     </p>
                   )}
-                  {actions.error && (
-                    <p
-                      role="alert"
-                      className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive"
-                    >
-                      {actions.error}
-                    </p>
-                  )}
-                </div>
+                </fieldset>
                 <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-border bg-muted/20 px-6 py-4 sm:flex-row sm:justify-end">
-                  <Button type="button" variant="outline" onClick={actions.close}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={actions.close}
+                    disabled={actions.saving}
+                  >
                     Volver
                   </Button>
                   <Button
                     type="submit"
+                    disabled={!actions.canSubmit}
                     variant={selected.action.type === 'cancel' ? 'destructive' : 'default'}
                   >
                     Aplicar acción

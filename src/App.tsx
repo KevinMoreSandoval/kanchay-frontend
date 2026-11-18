@@ -2,12 +2,13 @@ import { lazy, Suspense, useState } from 'react';
 import { useAuth } from './hooks/use-auth';
 import LoginPage from './app/auth/login/page';
 import RegisterPage from './app/auth/register/page';
-import ClientPage from './app/protected/client/page';
-import ReceptionDashboard from './app/protected/recepcionist/page';
+const ClientPage = lazy(() => import('./app/protected/client/page'));
+const ReceptionDashboard = lazy(() => import('./app/protected/recepcionist/page'));
 const AdminPage = lazy(() => import('./app/protected/admin/page'));
 import { Loading } from '@/components/ui';
 import type { UserRole, AuthSession } from '@/types';
 import type { LoginCredentials } from './services/auth-service';
+import { toast } from '@/services/toast-service';
 
 function getRequestedRole(): UserRole | null {
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
@@ -27,9 +28,10 @@ export default function App() {
     try {
       const data = await login(credentials);
       if (requestedRole && data.user.role !== requestedRole) {
-        logout();
+        await logout();
         throw new Error(`Este correo no tiene permisos para el módulo de ${requestedRole}.`);
       }
+      toast.success('Sesión iniciada correctamente.');
       return data;
     } finally {
       setScreenLoading(null);
@@ -38,9 +40,14 @@ export default function App() {
 
   const handleLogout = async () => {
     setScreenLoading('logout');
-    await new Promise<void>((resolve) => window.setTimeout(resolve, 200));
-    logout();
-    setScreenLoading(null);
+    try {
+      await logout();
+      toast.info('Sesión cerrada.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo cerrar la sesión.');
+    } finally {
+      setScreenLoading(null);
+    }
   };
 
   if (loading) {

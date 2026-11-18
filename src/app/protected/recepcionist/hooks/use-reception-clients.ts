@@ -1,11 +1,8 @@
+import { notifyToast } from '@/services/toast-service';
 import { useEffect, useRef, useState } from 'react';
-import { getRegisteredUsers } from '@/services/auth-service';
-import { getReservations } from '@/services/local-data-service';
+import { useClients } from '@/hooks/use-clients';
+import { useReservations } from '@/hooks/use-reservations';
 import type { User } from '@/types';
-
-function readClients() {
-  return getRegisteredUsers().filter((user) => user.role === 'Cliente');
-}
 
 function normalize(value: string) {
   return value
@@ -26,8 +23,18 @@ function paginate<T>(items: T[], page: number) {
 }
 
 export function useReceptionClients() {
-  const [clients, setClients] = useState(readClients);
-  const [reservations, setReservations] = useState(getReservations);
+  const {
+    clients,
+    loading: clientsLoading,
+    error: clientsError,
+    refresh: refreshClients,
+  } = useClients();
+  const {
+    reservations,
+    loading: reservationsLoading,
+    error: reservationsError,
+    refresh: refreshReservations,
+  } = useReservations();
   const [search, setSearch] = useState('');
   const [createClientOpen, setCreateClientOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -37,21 +44,6 @@ export function useReceptionClients() {
   const [reservationId, setReservationId] = useState<number | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const historyDialogRef = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    const refresh = () => {
-      setClients(readClients());
-      setReservations(getReservations());
-    };
-    const timer = window.setInterval(refresh, 30_000);
-    window.addEventListener('storage', refresh);
-    window.addEventListener('focus', refresh);
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener('storage', refresh);
-      window.removeEventListener('focus', refresh);
-    };
-  }, []);
 
   const client = clients.find((item) => item.id === clientId);
   const history = client
@@ -102,6 +94,12 @@ export function useReceptionClients() {
     );
 
   return {
+    loading: clientsLoading || reservationsLoading,
+    loadError: clientsError || reservationsError,
+    retry: () => {
+      void refreshClients();
+      void refreshReservations();
+    },
     search,
     client,
     detail,
@@ -115,11 +113,13 @@ export function useReceptionClients() {
     },
     closeCreateClient: () => setCreateClientOpen(false),
     onClientCreated: (user: User) => {
-      setClients(readClients());
+      void refreshClients();
       setSearch(user.email);
       setPage(1);
       setCreateClientOpen(false);
-      setFeedback(`Cliente ${user.firstName} ${user.lastName} creado correctamente.`);
+      setFeedback(
+        notifyToast(`Cliente ${user.firstName} ${user.lastName} creado correctamente.`, 'success')
+      );
     },
     hasClients: clients.length > 0,
     clients: paginate(filtered, page),
@@ -131,13 +131,13 @@ export function useReceptionClients() {
       setPage(1);
     },
     selectClient: (id: string) => {
-      setReservations(getReservations());
+      void refreshReservations();
       setClientId(id);
       setReservationPage(1);
       setReservationId(null);
     },
     openDetail: (id: number) => {
-      setReservations(getReservations());
+      void refreshReservations();
       setReservationId(id);
     },
     closeDetail: () => setReservationId(null),

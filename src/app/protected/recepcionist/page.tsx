@@ -7,6 +7,7 @@ import { useReceptionDashboard } from './hooks/use-reception-dashboard';
 import { ReceptionReservations } from './components/reception-reservations';
 import { ReceptionClients } from './components/reception-clients';
 import type { User } from '@/types';
+import { RemoteCollectionState } from '@/components/remote-collection-state';
 
 export interface ReceptionDashboardProps {
   user?: User | null;
@@ -22,6 +23,9 @@ const receptionItems: SidebarItem[] = [
 export default function ReceptionDashboard({ user, onLogout }: ReceptionDashboardProps) {
   const {
     activeSection,
+    loading,
+    error,
+    refresh,
     setActiveSection,
     search,
     setSearch,
@@ -52,6 +56,11 @@ export default function ReceptionDashboard({ user, onLogout }: ReceptionDashboar
             <ReceptionReservations />
           ) : activeSection === '/recepcionista/clientes' ? (
             <ReceptionClients />
+          ) : loading || error ? (
+            <section className="space-y-4">
+              <h1 className="text-2xl font-black">Panel de Recepción</h1>
+              <RemoteCollectionState loading={loading} error={error} retry={refresh} />
+            </section>
           ) : (
             <>
               <div className="flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-end sm:justify-between">

@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { notifyToast, toast } from '@/services/toast-service';
+import { useState, useRef } from 'react';
 import type { LoginCredentials } from '@/services/auth-service';
 import type { AuthSession } from '@/types';
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { useFormValidation } from '@/hooks/use-form-validation';
+import { validateLoginForm } from '../validations';
 
 export interface LoginErrors {
   email?: string;
@@ -18,46 +20,34 @@ export function useLoginForm({ onLoginSuccess }: UseLoginFormProps) {
     email: '',
     password: '',
   });
-  const [errors, setErrors] = useState<LoginErrors>({});
+  const validation = useFormValidation(formData, validateLoginForm);
+  const busy = useRef(false);
   const [authError, setAuthError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [forgotNotification, setForgotNotification] = useState<string>('');
-
-  const validate = (): boolean => {
-    const nextErrors: LoginErrors = {};
-
-    if (!formData.email.trim()) {
-      nextErrors.email = 'El correo electrónico es obligatorio.';
-    } else if (!EMAIL_REGEX.test(formData.email.trim())) {
-      nextErrors.email = 'Ingresa un correo electrónico válido.';
-    }
-
-    if (!formData.password) {
-      nextErrors.password = 'La contraseña es obligatoria.';
-    }
-
-    setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    if (errors[name as keyof LoginErrors]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }));
-    }
+    validation.touch(name as keyof LoginCredentials);
     if (authError) setAuthError('');
     if (forgotNotification) setForgotNotification('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy.current) return;
     setAuthError('');
     setForgotNotification('');
 
-    if (!validate()) return;
+    validation.showAll();
+    if (!validation.isValid || !onLoginSuccess) {
+      toast.error('Revisa tu correo y contraseña para continuar.');
+      return;
+    }
 
+    busy.current = true;
     setIsSubmitting(true);
     try {
       await onLoginSuccess?.({
@@ -66,15 +56,19 @@ export function useLoginForm({ onLoginSuccess }: UseLoginFormProps) {
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo iniciar sesión.';
-      setAuthError(message);
+      setAuthError(notifyToast(message, 'error'));
     } finally {
+      busy.current = false;
       setIsSubmitting(false);
     }
   };
 
   return {
     formData,
-    errors,
+    errors: validation.errors,
+    canSubmit: validation.isValid && !isSubmitting && Boolean(onLoginSuccess),
+    handleBlur: (event: React.FocusEvent<HTMLInputElement>) =>
+      validation.touch(event.target.name as keyof LoginCredentials),
     authError,
     isSubmitting,
     forgotNotification,

@@ -1,3 +1,4 @@
+import { RemoteCollectionState } from '@/components/remote-collection-state';
 import { ReservationActionModal } from './reservation-action-modal';
 import { useReceptionReservationActions } from '../hooks/use-reception-reservation-actions';
 import { CreateReservationPanel } from './create-reservation-panel';
@@ -18,6 +19,17 @@ export function ReceptionReservations() {
   const table = useReceptionReservations();
   const { dialogRef, ...actions } = useReceptionReservationActions(table.refreshReservations);
   const { filters, updateFilter } = table;
+  if ((table.loading || table.loadError) && table.rows.length === 0)
+    return (
+      <section className="space-y-4">
+        <h1 className="text-2xl font-black">Reservas</h1>
+        <RemoteCollectionState
+          loading={table.loading}
+          error={table.loadError}
+          retry={table.refreshReservations}
+        />
+      </section>
+    );
 
   return (
     <>
@@ -117,16 +129,7 @@ export function ReceptionReservations() {
           Mostrando {table.first}–{table.last} de {table.total} reservas. Página {table.currentPage}{' '}
           de {table.totalPages}.
         </p>
-        {actions.feedback && (
-          <p role="status" className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
-            {actions.feedback}
-          </p>
-        )}
-        {actions.error && !actions.selection && (
-          <p role="alert" className="text-sm text-destructive">
-            {actions.error}
-          </p>
-        )}
+
         <ReservationActionModal dialogRef={dialogRef} {...actions} />
         <ReservationsTable
           onAction={actions.open}

@@ -24,6 +24,7 @@ import type { ReservationStatus } from '@/types';
 import { useReceptionClients } from '../hooks/use-reception-clients';
 import { reservationStatuses } from '../hooks/use-reception-reservations';
 import { CreateClientModal } from './create-client-modal';
+import { RemoteCollectionState } from '@/components/remote-collection-state';
 
 const paymentStatuses = {
   PENDIENTE: 'Pendiente',
@@ -94,6 +95,13 @@ function Pagination({
 
 export function ReceptionClients() {
   const { dialogRef, historyDialogRef, ...view } = useReceptionClients();
+  if ((view.loading || view.loadError) && !view.hasClients)
+    return (
+      <section className="space-y-4">
+        <h1 className="text-2xl font-black">Clientes</h1>
+        <RemoteCollectionState loading={view.loading} error={view.loadError} retry={view.retry} />
+      </section>
+    );
   const detail = view.detail;
   return (
     <>
@@ -116,11 +124,7 @@ export function ReceptionClients() {
           onCreated={view.onClientCreated}
         />
       )}
-      {view.feedback && (
-        <p role="status" className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
-          {view.feedback}
-        </p>
-      )}
+
       <section aria-label="Consulta de clientes" className="space-y-4">
         <div className="space-y-2 rounded-xl border border-border bg-card p-4">
           <Label htmlFor="client-search">Buscar cliente</Label>

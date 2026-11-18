@@ -18,6 +18,9 @@
   --accent-foreground: #155dfc;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
+  --success: #15803d;
+  --whatsapp: #25d366;
+  --warning: #b45309;
   --border: #e5e7eb;
   --input: #d1d5db;
   --ring: #155dfc;
@@ -42,6 +45,9 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-whatsapp: var(--whatsapp);
+  --color-warning: var(--warning);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

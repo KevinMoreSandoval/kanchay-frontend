@@ -5,6 +5,7 @@ import type { PaymentMethod } from '@/types';
 import type { TimeSlot } from './availability-time-slots';
 
 export interface AvailabilitySummaryProps {
+  disabled?: boolean;
   courtName: string;
   selectedDate: string;
   selectedSlots: TimeSlot[];
@@ -45,12 +46,17 @@ export function AvailabilitySummary({
   onNext,
   buttonText = 'Continuar a Confirmación',
   selectedPaymentMethod,
+  disabled = false,
 }: AvailabilitySummaryProps) {
   const sortedSlots = useMemo(() => {
     return [...selectedSlots].sort((a, b) => a.startTime.localeCompare(b.startTime));
   }, [selectedSlots]);
 
-  const totalMinutes = sortedSlots.length * 60;
+  const totalMinutes = sortedSlots.reduce((total, slot) => {
+    const [startHour, startMinute] = slot.startTime.split(':').map(Number);
+    const [endHour, endMinute] = slot.endTime.split(':').map(Number);
+    return total + endHour * 60 + endMinute - startHour * 60 - startMinute;
+  }, 0);
 
   return (
     <Card className="sticky top-28 space-y-5 rounded-3xl border border-border/80 bg-card p-5 sm:p-6 shadow-sm">
@@ -137,7 +143,7 @@ export function AvailabilitySummary({
       {/* Botón de acción */}
       <Button
         type="button"
-        disabled={selectedSlots.length === 0}
+        disabled={disabled || selectedSlots.length === 0}
         onClick={onNext}
         className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-primary font-bold text-white shadow-md shadow-primary/20 transition-all hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
       >

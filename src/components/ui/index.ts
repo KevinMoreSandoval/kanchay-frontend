@@ -10,3 +10,5 @@ export * from './password-input';
 export * from './loading';
 export * from './dropdown-menu';
 export * from './select';
+export * from './switch';
+export * from './toast';

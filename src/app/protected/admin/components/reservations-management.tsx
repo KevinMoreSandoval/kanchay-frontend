@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/table';
 import type { PaymentMethod, PaymentStatus, Reservation, ReservationStatus } from '@/types';
 import { useAdminReservations } from '../hooks/use-admin-reservations';
+import { RemoteCollectionState } from '@/components/remote-collection-state';
 
 const STATUS_OPTIONS: {
   value: ReservationStatus;
@@ -92,17 +93,19 @@ function ReservationActions({
     <div className="flex min-w-52 flex-wrap justify-end gap-1.5">
       {reservation.estado === 'PENDIENTE' && (
         <Button
+          disabled={management.pending || !management.canPerform(reservation, 'confirm')}
           type="button"
           size="sm"
           variant="outline"
           onClick={() => management.confirm(reservation.id)}
         >
           <Check aria-hidden="true" />
-          Confirmar
+          Registrar pago y confirmar
         </Button>
       )}
       {management.canMarkAttendance(reservation) && (
         <Button
+          disabled={management.pending || !management.canPerform(reservation, 'attendance')}
           type="button"
           size="sm"
           variant="outline"
@@ -114,6 +117,7 @@ function ReservationActions({
       )}
       {['PENDIENTE', 'CONFIRMADA'].includes(reservation.estado) && (
         <Button
+          disabled={management.pending || !management.canPerform(reservation, 'reschedule')}
           type="button"
           size="sm"
           variant="outline"
@@ -125,6 +129,7 @@ function ReservationActions({
       )}
       {management.canCancel(reservation) && (
         <Button
+          disabled={management.pending || !management.canPerform(reservation, 'cancel')}
           type="button"
           size="sm"
           variant="ghost"
@@ -134,18 +139,20 @@ function ReservationActions({
           Cancelar
         </Button>
       )}
-      {paymentStatus === 'PENDIENTE' && hasPaymentMethod && (
+      {paymentStatus === 'PENDIENTE' && hasPaymentMethod && reservation.estado === 'CONFIRMADA' && (
         <Button
+          disabled={management.pending || !management.canPerform(reservation, 'pay')}
           type="button"
           size="sm"
           variant="ghost"
           onClick={() => management.updatePayment(reservation.id, 'PAGADO')}
         >
-          Registrar pago
+          Registrar pago y confirmar
         </Button>
       )}
       {paymentStatus === 'POR_REEMBOLSAR' && (
         <Button
+          disabled={management.pending || !management.canPerform(reservation, 'refund')}
           type="button"
           size="sm"
           variant="ghost"
@@ -160,6 +167,14 @@ function ReservationActions({
 
 export function ReservationsManagement() {
   const management = useAdminReservations();
+  if ((management.loading || management.loadError) && management.totalReservations === 0)
+    return (
+      <RemoteCollectionState
+        loading={management.loading}
+        error={management.loadError}
+        retry={management.refreshReservations}
+      />
+    );
   const chartMax = Math.max(1, ...management.chartData.map((item) => item.count));
 
   return (
@@ -182,16 +197,6 @@ export function ReservationsManagement() {
             <p className="text-sm text-muted-foreground" aria-live="polite">
               Mostrando {management.reservations.length} de {management.totalReservations} reservas
             </p>
-            {management.feedback && (
-              <p role="status" className="text-sm font-medium text-primary">
-                {management.feedback}
-              </p>
-            )}
-            {management.error && (
-              <p role="alert" className="text-sm font-medium text-destructive">
-                {management.error}
-              </p>
-            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -362,6 +367,7 @@ export function ReservationsManagement() {
                                       />
                                       {change.surchargePaymentStatus === 'PENDIENTE' && (
                                         <Button
+                                          disabled={management.pending}
                                           type="button"
                                           size="sm"
                                           variant="outline"
@@ -419,6 +425,7 @@ export function ReservationsManagement() {
                               </span>
                               <div className="flex gap-2">
                                 <Button
+                                  disabled={management.pending}
                                   type="button"
                                   size="sm"
                                   variant="outline"
@@ -427,6 +434,10 @@ export function ReservationsManagement() {
                                   Volver
                                 </Button>
                                 <Button
+                                  disabled={
+                                    management.pending ||
+                                    !management.canPerform(reservation, 'cancel')
+                                  }
                                   type="button"
                                   size="sm"
                                   variant="destructive"
@@ -536,6 +547,7 @@ export function ReservationsManagement() {
                 </CardDescription>
               </div>
               <Button
+                disabled={management.pending}
                 type="button"
                 variant="ghost"
                 size="icon"
@@ -553,8 +565,14 @@ export function ReservationsManagement() {
                   <strong>S/ {(management.rescheduling.monto * 0.15).toFixed(2)}</strong>
                 </span>
               </div>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <FormField id="reschedule-date" label="Nueva fecha" required>
+              <fieldset disabled={management.pending} className="grid gap-4 sm:grid-cols-3">
+                <FormField
+                  id="reschedule-date"
+                  error={management.scheduleErrors.date}
+                  onBlur={() => management.touchSchedule('date')}
+                  label="Nueva fecha"
+                  required
+                >
                   <Input
                     id="reschedule-date"
                     type="date"
@@ -568,7 +586,13 @@ export function ReservationsManagement() {
                     required
                   />
                 </FormField>
-                <FormField id="reschedule-start" label="Hora de inicio" required>
+                <FormField
+                  id="reschedule-start"
+                  error={management.scheduleErrors.startTime}
+                  onBlur={() => management.touchSchedule('startTime')}
+                  label="Hora de inicio"
+                  required
+                >
                   <Input
                     id="reschedule-start"
                     type="time"
@@ -582,7 +606,13 @@ export function ReservationsManagement() {
                     required
                   />
                 </FormField>
-                <FormField id="reschedule-end" label="Hora de fin" required>
+                <FormField
+                  id="reschedule-end"
+                  error={management.scheduleErrors.endTime}
+                  onBlur={() => management.touchSchedule('endTime')}
+                  label="Hora de fin"
+                  required
+                >
                   <Input
                     id="reschedule-end"
                     type="time"
@@ -596,17 +626,27 @@ export function ReservationsManagement() {
                     required
                   />
                 </FormField>
-              </div>
-              {management.error && (
-                <p role="alert" className="mt-4 text-sm font-medium text-destructive">
-                  {management.error}
+              </fieldset>
+              {!management.hasScheduleChanges && (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Cambia la fecha o el horario para habilitar el guardado.
                 </p>
               )}
+
               <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <Button type="button" variant="outline" onClick={management.closeReschedule}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={management.pending}
+                  onClick={management.closeReschedule}
+                >
                   Cerrar
                 </Button>
-                <Button type="button" onClick={management.saveReschedule}>
+                <Button
+                  type="button"
+                  disabled={!management.canSaveReschedule}
+                  onClick={management.saveReschedule}
+                >
                   <Clock3 aria-hidden="true" />
                   Guardar cambio
                 </Button>

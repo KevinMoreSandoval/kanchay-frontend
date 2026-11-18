@@ -6,7 +6,7 @@ import type {
   CourtSurface,
   CourtCoverType,
   CourtLighting,
-} from './types';
+} from '@/types/courts';
 
 export const SPORTS: CourtSport[] = [
   'Fútbol 5',

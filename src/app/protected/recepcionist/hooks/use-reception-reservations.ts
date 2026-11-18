@@ -1,5 +1,6 @@
-﻿import { useEffect, useState } from 'react';
-import { getReservations, getTodayDateString } from '@/services/local-data-service';
+﻿import { useState } from 'react';
+import { getTodayDateString } from '@/lib/date';
+import { useReservations } from '@/hooks/use-reservations';
 import type { ReservationStatus } from '@/types';
 
 type Filters = {
@@ -21,25 +22,10 @@ export const reservationStatuses: Record<ReservationStatus, string> = {
 };
 
 export function useReceptionReservations() {
-  const [reservations, setReservations] = useState(getReservations);
+  const { reservations, loading, error, refresh } = useReservations();
   const [filters, setFilters] = useState(initialFilters);
   const [page, setPage] = useState(1);
   const pageSize = 10;
-
-  useEffect(() => {
-    const refresh = () => setReservations(getReservations());
-    const timer = window.setInterval(refresh, 30_000);
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === null || event.key === 'kanchaya.reservations') refresh();
-    };
-    window.addEventListener('storage', onStorage);
-    window.addEventListener('focus', refresh);
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener('storage', onStorage);
-      window.removeEventListener('focus', refresh);
-    };
-  }, []);
 
   const today = getTodayDateString();
   const query = filters.search.trim().toLocaleLowerCase('es');
@@ -73,7 +59,9 @@ export function useReceptionReservations() {
   }
 
   return {
-    refreshReservations: () => setReservations(getReservations()),
+    refreshReservations: refresh,
+    loading,
+    loadError: error,
     filters,
     updateFilter,
     courts,

@@ -8,6 +8,9 @@ import { StepHeader } from './step-header';
 import { AvailabilitySummary } from './availability-summary';
 
 interface ConfirmationStepProps {
+  saving?: boolean;
+  canConfirm?: boolean;
+  validationMessage?: string | null;
   court: Court;
   selectedDate: string;
   selectedSlots: TimeSlot[];
@@ -30,6 +33,9 @@ export const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
   totalAmount,
   onBack,
   onConfirm,
+  saving = false,
+  canConfirm = true,
+  validationMessage,
 }) => {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('YAPE_PLIN');
 
@@ -119,6 +125,7 @@ export const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
     <div className="w-full space-y-6 animate-in fade-in duration-300">
       <StepHeader
         title="Confirmación de Reserva"
+        disabled={saving}
         onBack={onBack}
         backLabel="Regresar a selección de disponibilidad"
       />
@@ -145,6 +152,7 @@ export const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
                       key={method.id}
                       type="button"
                       onClick={() => setPaymentMethod(method.id)}
+                      disabled={saving}
                       aria-pressed={isSelected}
                       className={cn(
                         'flex min-h-36 flex-col justify-between gap-5 rounded-2xl border p-4 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
@@ -181,14 +189,22 @@ export const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
 
           {/* Columna Derecha: Resumen sincronizado con badges e idéntico estilo */}
           <aside aria-label="Resumen de la reserva" className="lg:pl-2">
+            {validationMessage && (
+              <p role="status" className="mb-3 text-sm text-muted-foreground">
+                {validationMessage}
+              </p>
+            )}
             <AvailabilitySummary
               courtName={courtName}
               selectedDate={selectedDate}
               selectedSlots={selectedSlots}
               totalAmount={totalAmount}
-              buttonText="Confirmar Reserva"
+              buttonText={saving ? 'Guardando reserva…' : 'Confirmar Reserva'}
+              disabled={saving || !canConfirm}
               selectedPaymentMethod={paymentMethod}
-              onNext={() => onConfirm(paymentMethod)}
+              onNext={() => {
+                if (!saving && canConfirm) onConfirm(paymentMethod);
+              }}
             />
           </aside>
         </div>

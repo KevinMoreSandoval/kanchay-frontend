@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { notifyToast } from '@/services/toast-service';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
   cancelReservation,
+  getAvailableReservationActions,
   confirmReservation,
   getReservationEndTimestamp,
   getReservationStartTimestamp,
@@ -9,8 +11,11 @@ import {
   updateReservationPaymentStatus,
   updateReservationSurchargePayment,
   type ReservationSchedule,
+  type ReservationActionType,
 } from '@/services/reservation-service';
-import { getReservations } from '@/services/local-data-service';
+import { useReservations } from '@/hooks/use-reservations';
+import { useFormValidation } from '@/hooks/use-form-validation';
+import { validateSchedule, scheduleChanged } from '@/lib/validation';
 import type { PaymentMethod, PaymentStatus, Reservation, ReservationStatus } from '@/types';
 
 export type ReservationStatusFilter = ReservationStatus | 'TODOS';
@@ -35,7 +40,14 @@ function canMarkAttendance(reservation: Reservation, now: number) {
 }
 
 export function useAdminReservations() {
-  const [reservations, setReservations] = useState<Reservation[]>(getReservations);
+  const {
+    reservations,
+    loading,
+    error: loadError,
+    refresh: refreshReservations,
+  } = useReservations();
+  const [pending, setPending] = useState(false);
+  const busy = useRef(false);
   const [now, setNow] = useState(Date.now);
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -53,22 +65,29 @@ export function useAdminReservations() {
     endTime: '',
   });
 
-  const refreshReservations = useCallback(() => {
-    setReservations(getReservations());
-    setNow(Date.now());
-  }, []);
+  const scheduleValidation = useFormValidation(scheduleForm, (data) => validateSchedule(data, now));
+  const hasScheduleChanges = rescheduling
+    ? scheduleChanged(scheduleForm, {
+        date: rescheduling.fecha,
+        startTime: rescheduling.horaInicio,
+        endTime: rescheduling.horaFin,
+      })
+    : false;
+  const canSaveReschedule =
+    !pending &&
+    scheduleValidation.isValid &&
+    hasScheduleChanges &&
+    Boolean(
+      rescheduling &&
+      getAvailableReservationActions(rescheduling, now).some(
+        (action) => action.type === 'reschedule'
+      )
+    );
 
   useEffect(() => {
-    const intervalId = window.setInterval(refreshReservations, 30_000);
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === null || event.key === 'kanchaya.reservations') refreshReservations();
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener('storage', handleStorage);
-    };
-  }, [refreshReservations]);
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const filteredReservations = useMemo(() => {
     const query = search.trim().toLocaleLowerCase('es');
@@ -113,26 +132,35 @@ export function useAdminReservations() {
     });
   }, [filteredReservations]);
 
-  const runAction = useCallback((action: () => Reservation[], successMessage: string) => {
+  const runAction = useCallback(async (action: () => Promise<unknown>, successMessage: string) => {
+    if (busy.current) return false;
+    busy.current = true;
+    setPending(true);
     setError('');
     try {
-      setReservations(action());
+      await action();
       setNow(Date.now());
-      setFeedback(successMessage);
+      setFeedback(notifyToast(successMessage, 'success'));
       return true;
     } catch (actionError) {
       setError(
-        actionError instanceof Error ? actionError.message : 'No se pudo completar la acción.'
+        notifyToast(
+          actionError instanceof Error ? actionError.message : 'No se pudo completar la acción.',
+          'error'
+        )
       );
       return false;
+    } finally {
+      busy.current = false;
+      setPending(false);
     }
   }, []);
 
   const confirm = (id: number) =>
-    runAction(() => confirmReservation(id), 'La reserva fue confirmada.');
+    runAction(() => confirmReservation(id), 'Pago registrado y reserva confirmada.');
 
-  const cancel = (id: number) => {
-    const success = runAction(() => cancelReservation(id), 'La reserva fue cancelada.');
+  const cancel = async (id: number) => {
+    const success = await runAction(() => cancelReservation(id), 'La reserva fue cancelada.');
     if (success) setCancelConfirmationId(null);
   };
 
@@ -145,7 +173,7 @@ export function useAdminReservations() {
   const updatePayment = (id: number, paymentStatus: PaymentStatus) =>
     runAction(
       () => updateReservationPaymentStatus(id, paymentStatus),
-      paymentStatus === 'PAGADO' ? 'Pago registrado.' : 'Reembolso registrado.'
+      paymentStatus === 'PAGADO' ? 'Pago registrado y reserva confirmada.' : 'Reembolso registrado.'
     );
 
   const updateSurchargePayment = (id: number, index: number) =>
@@ -155,6 +183,9 @@ export function useAdminReservations() {
     );
 
   const openReschedule = (reservation: Reservation) => {
+    if (busy.current) return;
+    setNow(Date.now());
+    scheduleValidation.reset();
     setRescheduling(reservation);
     setScheduleForm({
       date: reservation.fecha,
@@ -165,13 +196,19 @@ export function useAdminReservations() {
   };
 
   const closeReschedule = () => {
+    if (busy.current) return;
     setRescheduling(null);
     setError('');
   };
 
-  const saveReschedule = () => {
-    if (!rescheduling) return;
-    const success = runAction(
+  const saveReschedule = async () => {
+    scheduleValidation.showAll();
+    if (!rescheduling || !canSaveReschedule) return;
+    if (Object.keys(validateSchedule(scheduleForm)).length) {
+      setNow(Date.now());
+      return;
+    }
+    const success = await runAction(
       () => rescheduleReservation(rescheduling.id, scheduleForm),
       'Se actualizó la fecha y horario. Se registró un recargo del 15% del monto original.'
     );
@@ -180,10 +217,22 @@ export function useAdminReservations() {
 
   const showPdfComingSoon = () => {
     setError('');
-    setFeedback('La exportación de reservas a PDF estará disponible próximamente.');
+    setFeedback(
+      notifyToast('La exportación de reservas a PDF estará disponible próximamente.', 'info')
+    );
   };
 
   return {
+    loading,
+    loadError,
+    refreshReservations,
+    pending,
+    canPerform: (reservation: Reservation, action: ReservationActionType) =>
+      getAvailableReservationActions(reservation, now).some((item) => item.type === action),
+    canSaveReschedule,
+    hasScheduleChanges,
+    scheduleErrors: scheduleValidation.errors,
+    touchSchedule: scheduleValidation.touch,
     reservations: filteredReservations,
     totalReservations: reservations.length,
     search,

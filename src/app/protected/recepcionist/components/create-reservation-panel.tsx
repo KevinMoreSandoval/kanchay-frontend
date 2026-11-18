@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import { CreateClientModal } from './create-client-modal';
 import { createPortal } from 'react-dom';
-import { CalendarPlus, CircleCheck, Plus, X } from 'lucide-react';
+import { CalendarPlus, Plus, X } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { useCreateReceptionReservation } from '../hooks/use-create-reception-reservation';
 import {
@@ -26,15 +26,7 @@ export function CreateReservationPanel({ onCreated }: { onCreated: () => void })
           Crear reserva
         </Button>
       </div>
-      {booking.notice && (
-        <p
-          role="status"
-          className="flex items-start gap-2 rounded-xl border border-primary/15 bg-primary/5 p-4 text-sm"
-        >
-          <CircleCheck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          {booking.notice}
-        </p>
-      )}
+
       {booking.clientModalOpen && (
         <CreateClientModal
           initialDni={booking.dni}
@@ -87,7 +79,7 @@ export function CreateReservationPanel({ onCreated }: { onCreated: () => void })
                   variant="ghost"
                   size="icon"
                   aria-label="Cerrar formulario"
-                  disabled={booking.clientModalOpen}
+                  disabled={booking.clientModalOpen || booking.saving}
                   onClick={booking.close}
                   className="-mr-2 -mt-2 shrink-0"
                 >

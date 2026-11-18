@@ -1,6 +1,9 @@
-﻿import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { saveManagedUser } from '@/services/auth-service';
+import { notifyToast, toast } from '@/services/toast-service';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { createClient } from '@/services/clients/client-service';
 import type { User } from '@/types';
+import { useFormValidation } from '@/hooks/use-form-validation';
+import { validateIdentity } from '@/lib/validation';
 
 export function useCreateClientModal(initialDni: string, onCreated: (user: User) => void) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -14,7 +17,10 @@ export function useCreateClientModal(initialDni: string, onCreated: (user: User)
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [errors, setErrors] = useState<Partial<Record<keyof typeof form, string>>>({});
+  const busy = useRef(false);
+  const validation = useFormValidation(form, (data) =>
+    validateIdentity(data, { requireDni: true, requirePhone: true, requireBirthDate: true })
+  );
   useEffect(() => {
     const dialog = dialogRef.current;
     const previousFocus = document.activeElement;
@@ -29,33 +35,27 @@ export function useCreateClientModal(initialDni: string, onCreated: (user: User)
   }, []);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (saving) return;
-    const nextErrors: typeof errors = {};
-    const namePattern = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
-    if (!form.firstName.trim()) nextErrors.firstName = 'El nombre es obligatorio.';
-    else if (!namePattern.test(form.firstName.trim()))
-      nextErrors.firstName = 'Solo se permiten letras.';
-    if (!form.lastName.trim()) nextErrors.lastName = 'El apellido es obligatorio.';
-    else if (!namePattern.test(form.lastName.trim()))
-      nextErrors.lastName = 'Solo se permiten letras.';
-    if (!/^\d{8}$/.test(form.dni.trim())) nextErrors.dni = 'El DNI debe tener 8 dígitos.';
-    if (!form.birthDate) nextErrors.birthDate = 'La fecha de nacimiento es obligatoria.';
-    if (!/^\d{9}$/.test(form.phone.trim())) nextErrors.phone = 'El teléfono debe tener 9 dígitos.';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
-      nextErrors.email = 'Ingresa un correo válido.';
-    setErrors(nextErrors);
-    setError('');
-    if (Object.keys(nextErrors).length) return;
+    if (busy.current) return;
+    validation.showAll();
+    if (!validation.isValid) {
+      toast.error('Revisa los campos marcados antes de crear el cliente.');
+      return;
+    }
+    busy.current = true;
     setSaving(true);
     setError('');
     try {
-      const users = await saveManagedUser({ ...form, role: 'Cliente' });
-      const user = users.find((item) => item.dni === form.dni.trim() && item.role === 'Cliente');
-      if (!user) throw new Error('No se pudo verificar el usuario creado.');
+      const user = await createClient(form);
       onCreated(user);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'No se pudo crear el usuario.');
+      setError(
+        notifyToast(
+          cause instanceof Error ? cause.message : 'No se pudo crear el usuario.',
+          'error'
+        )
+      );
     } finally {
+      busy.current = false;
       setSaving(false);
     }
   }
@@ -64,12 +64,15 @@ export function useCreateClientModal(initialDni: string, onCreated: (user: User)
     form,
     saving,
     error,
-    errors,
+    errors: validation.errors,
+    canSubmit: validation.isValid && !saving,
+    touchField: validation.touch,
     submit,
     updateField: (key: keyof typeof form, value: string) => {
+      if (busy.current) return;
+      validation.touch(key);
       setForm((previous) => ({ ...previous, [key]: value }));
       setError('');
-      setErrors((previous) => ({ ...previous, [key]: undefined }));
     },
   };
 }

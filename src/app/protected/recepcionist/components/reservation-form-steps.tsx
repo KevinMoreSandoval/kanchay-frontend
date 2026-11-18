@@ -54,17 +54,6 @@ export function ReservationSteps({ step }: { step: 1 | 2 | 3 }) {
   );
 }
 
-function FormError({ error }: { error: string }) {
-  return error ? (
-    <p
-      role="alert"
-      className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive"
-    >
-      {error}
-    </p>
-  ) : null;
-}
-
 export function ReservationClientStep({ booking }: { booking: Booking }) {
   return (
     <form onSubmit={booking.continueWithClient} className="flex min-h-0 flex-1 flex-col">
@@ -76,7 +65,12 @@ export function ReservationClientStep({ booking }: { booking: Booking }) {
           </p>
         </div>
         <div className="rounded-xl border border-border bg-muted/20 p-4">
-          <FormField id="reservation-client-dni" label="DNI del cliente" required>
+          <FormField
+            id="reservation-client-dni"
+            label="DNI del cliente"
+            error={booking.dniError}
+            required
+          >
             <div className="flex flex-col gap-2 sm:flex-row">
               <Input
                 autoFocus
@@ -91,7 +85,12 @@ export function ReservationClientStep({ booking }: { booking: Booking }) {
                 value={booking.dni}
                 onChange={(event) => booking.updateDni(event.target.value)}
               />
-              <Button type="button" variant="outline" onClick={booking.lookupClient}>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!booking.canLookup}
+                onClick={booking.lookupClient}
+              >
                 <Search aria-hidden="true" className="h-4 w-4" />
                 Buscar cliente
               </Button>
@@ -114,19 +113,23 @@ export function ReservationClientStep({ booking }: { booking: Booking }) {
                 </p>
               </div>
             </div>
-            <Button type="button" variant="outline" onClick={booking.openClientModal}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={booking.openClientModal}
+              disabled={booking.lookingUp || booking.saving}
+            >
               <UserRoundPlus aria-hidden="true" className="h-4 w-4" />
               Crear usuario
             </Button>
           </section>
         )}
-        <FormError error={booking.error} />
       </div>
       <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-border bg-muted/20 px-5 py-4 sm:flex-row sm:justify-between sm:px-8">
-        <Button type="button" variant="outline" onClick={booking.close}>
+        <Button type="button" variant="outline" onClick={booking.close} disabled={booking.saving}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={booking.notFound}>
+        <Button type="submit" disabled={!booking.canLookup || booking.notFound}>
           {booking.client ? 'Continuar' : 'Verificar DNI'}
           <ArrowRight aria-hidden="true" className="h-4 w-4" />
         </Button>
@@ -150,7 +153,13 @@ export function ReservationDetailsStep({ booking }: { booking: Booking }) {
             Cancha y horario
           </h4>
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField id="new-court" label="Cancha" required>
+            <FormField
+              id="new-court"
+              error={booking.fieldErrors.courtId}
+              onBlur={() => booking.touchField('courtId')}
+              label="Cancha"
+              required
+            >
               <select
                 id="new-court"
                 required
@@ -166,7 +175,13 @@ export function ReservationDetailsStep({ booking }: { booking: Booking }) {
                 ))}
               </select>
             </FormField>
-            <FormField id="new-date" label="Fecha" required>
+            <FormField
+              id="new-date"
+              error={booking.fieldErrors.fecha}
+              onBlur={() => booking.touchField('fecha')}
+              label="Fecha"
+              required
+            >
               <Input
                 id="new-date"
                 type="date"
@@ -176,7 +191,13 @@ export function ReservationDetailsStep({ booking }: { booking: Booking }) {
                 onChange={(event) => updateField('fecha', event.target.value)}
               />
             </FormField>
-            <FormField id="new-start" label="Hora de inicio" required>
+            <FormField
+              id="new-start"
+              error={booking.fieldErrors.horaInicio}
+              onBlur={() => booking.touchField('horaInicio')}
+              label="Hora de inicio"
+              required
+            >
               <Input
                 id="new-start"
                 type="time"
@@ -185,7 +206,13 @@ export function ReservationDetailsStep({ booking }: { booking: Booking }) {
                 onChange={(event) => updateField('horaInicio', event.target.value)}
               />
             </FormField>
-            <FormField id="new-end" label="Hora de fin" required>
+            <FormField
+              id="new-end"
+              error={booking.fieldErrors.horaFin}
+              onBlur={() => booking.touchField('horaFin')}
+              label="Hora de fin"
+              required
+            >
               <Input
                 id="new-end"
                 type="time"
@@ -217,7 +244,13 @@ export function ReservationDetailsStep({ booking }: { booking: Booking }) {
             <CreditCard aria-hidden="true" className="h-4 w-4 text-primary" />
             Pago y observaciones
           </h4>
-          <FormField id="new-payment" label="Método de pago" required>
+          <FormField
+            id="new-payment"
+            error={booking.fieldErrors.paymentMethod}
+            onBlur={() => booking.touchField('paymentMethod')}
+            label="Método de pago"
+            required
+          >
             <select
               id="new-payment"
               className={selectClass}
@@ -232,7 +265,12 @@ export function ReservationDetailsStep({ booking }: { booking: Booking }) {
               <option value="YAPE_PLIN">Yape / Plin</option>
             </select>
           </FormField>
-          <FormField id="new-notes" label="Observaciones (opcional)">
+          <FormField
+            id="new-notes"
+            error={booking.fieldErrors.observaciones}
+            onBlur={() => booking.touchField('observaciones')}
+            label="Observaciones (opcional)"
+          >
             <Input
               id="new-notes"
               maxLength={500}
@@ -260,14 +298,13 @@ export function ReservationDetailsStep({ booking }: { booking: Booking }) {
             evitar su cancelación automática.
           </p>
         </div>
-        <FormError error={booking.error} />
       </div>
       <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-border bg-muted/20 px-5 py-4 sm:flex-row sm:justify-between sm:px-8">
-        <Button type="button" variant="outline" onClick={booking.back}>
+        <Button type="button" variant="outline" onClick={booking.back} disabled={booking.saving}>
           <ArrowLeft aria-hidden="true" className="h-4 w-4" />
           Anterior
         </Button>
-        <Button type="submit" disabled={!booking.availableCourts.length}>
+        <Button type="submit" disabled={!booking.canReview}>
           Revisar reserva
           <ArrowRight aria-hidden="true" className="h-4 w-4" />
         </Button>
@@ -406,14 +443,13 @@ export function ReservationConfirmationStep({ booking }: { booking: Booking }) {
             </p>
           </div>
         </div>
-        <FormError error={booking.error} />
       </div>
       <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-border bg-muted/20 px-5 py-4 sm:flex-row sm:justify-between sm:px-8">
-        <Button type="button" variant="outline" onClick={booking.back}>
+        <Button type="button" variant="outline" onClick={booking.back} disabled={booking.saving}>
           <ArrowLeft aria-hidden="true" className="h-4 w-4" />
           Anterior
         </Button>
-        <Button type="submit">
+        <Button type="submit" disabled={!booking.canSubmit}>
           <Check aria-hidden="true" className="h-4 w-4" />
           Crear reserva
         </Button>

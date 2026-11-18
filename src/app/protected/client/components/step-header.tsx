@@ -4,6 +4,7 @@ import { Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
 
 export interface StepHeaderProps {
+  disabled?: boolean;
   /** Título principal que indica en qué sección se encuentra el usuario */
   title: string;
   /** Subtítulo contextual opcional (ej: nombre de la cancha o sede) */
@@ -26,6 +27,7 @@ export const StepHeader: React.FC<StepHeaderProps> = ({
   onBack,
   backLabel = 'Regresar al catálogo',
   className,
+  disabled = false,
 }) => {
   return (
     <header
@@ -36,6 +38,7 @@ export const StepHeader: React.FC<StepHeaderProps> = ({
         variant="outline"
         size="icon"
         onClick={onBack}
+        disabled={disabled}
         aria-label={backLabel}
         className="h-9 w-9 shrink-0 cursor-pointer rounded-xl border-border bg-background text-foreground transition-colors hover:bg-muted"
       >

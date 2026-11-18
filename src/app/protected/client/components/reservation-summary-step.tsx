@@ -3,6 +3,7 @@ import { ArrowRight, Home, Info } from 'lucide-react';
 import type { Reservation } from '@/types';
 import { Button, Card } from '@/components/ui';
 import type { TimeSlot } from './availability-time-slots';
+import { ReservationPaymentContact } from './reservation-payment-contact';
 
 interface ReservationSummaryStepProps {
   reservation: Reservation;
@@ -107,7 +108,8 @@ export const ReservationSummaryStep: React.FC<ReservationSummaryStepProps> = ({
             <>
               Tu turno para{' '}
               <strong className="font-bold text-foreground">{reservation.cancha}</strong> ha sido
-              registrado. Recuerda abonar en recepción dentro de los primeros 15 minutos.
+              registrado. Coordina el pago con recepción dentro de los primeros 15 minutos para
+              confirmar tu reserva.
             </>
           )}
         </p>
@@ -118,9 +120,13 @@ export const ReservationSummaryStep: React.FC<ReservationSummaryStepProps> = ({
             <strong className="font-semibold text-foreground">Recomendación:</strong>{' '}
             {isConfirmed
               ? 'Tu reserva está confirmada. Te recomendamos presentarte en recepción 10 minutos antes de tu turno para ingresar a tiempo a la cancha.'
-              : 'Cuentas con 15 minutos para validar y pagar tu turno en recepción. Te sugerimos llegar 10 minutos antes.'}
+              : 'Tu reserva está pendiente de confirmación. Si recepción no la confirma en los 15 minutos posteriores al registro, se cancelará automáticamente.'}
           </p>
         </div>
+
+        {reservation.estado === 'PENDIENTE' && (
+          <ReservationPaymentContact reservation={reservation} />
+        )}
 
         <div className="mt-8 flex w-full max-w-md flex-col-reverse gap-3 sm:flex-row">
           <Button

@@ -10,6 +10,10 @@ export default defineConfig([
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    files: ['tests/**/*.mjs'],
+    languageOptions: { globals: globals.node },
+  },
+  {
     files: ['**/*.{ts,tsx,js,jsx}'],
     plugins: {
       'react-hooks': reactHooks,

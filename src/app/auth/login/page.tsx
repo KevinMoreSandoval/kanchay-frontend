@@ -13,9 +13,9 @@ export default function LoginPage({ onLoginSuccess, onNavigateToRegister }: Logi
   const {
     formData,
     errors,
-    authError,
+    canSubmit,
+    handleBlur,
     isSubmitting,
-    forgotNotification,
     setForgotNotification,
     handleChange,
     handleSubmit,
@@ -33,24 +33,6 @@ export default function LoginPage({ onLoginSuccess, onNavigateToRegister }: Logi
         </p>
       </div>
 
-      {authError && (
-        <div
-          role="alert"
-          className="p-3.5 rounded-lg border border-destructive/20 bg-destructive/10 text-destructive text-sm font-medium animate-in fade-in"
-        >
-          {authError}
-        </div>
-      )}
-
-      {forgotNotification && (
-        <div
-          role="status"
-          className="p-3.5 rounded-lg border border-primary/20 bg-primary/10 text-primary text-sm font-medium animate-in fade-in"
-        >
-          {forgotNotification}
-        </div>
-      )}
-
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <FormField id="email" label="Correo electrónico" error={errors.email} required>
           <Input
@@ -61,6 +43,7 @@ export default function LoginPage({ onLoginSuccess, onNavigateToRegister }: Logi
             placeholder="correo@ejemplo.com"
             value={formData.email}
             onChange={handleChange}
+            onBlur={handleBlur}
             disabled={isSubmitting}
             error={!!errors.email}
           />
@@ -74,6 +57,7 @@ export default function LoginPage({ onLoginSuccess, onNavigateToRegister }: Logi
             placeholder="••••••••"
             value={formData.password}
             onChange={handleChange}
+            onBlur={handleBlur}
             disabled={isSubmitting}
             error={!!errors.password}
           />
@@ -97,7 +81,7 @@ export default function LoginPage({ onLoginSuccess, onNavigateToRegister }: Logi
           type="submit"
           size="lg"
           className="w-full text-base font-bold shadow-md hover:shadow-lg transition-all"
-          disabled={isSubmitting}
+          disabled={!canSubmit}
         >
           {isSubmitting ? <Loading label="Iniciando sesión..." /> : 'Iniciar sesión'}
         </Button>

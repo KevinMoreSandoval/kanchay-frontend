@@ -17,6 +17,9 @@ interface AvailabilityStepProps {
   totalAmount: number;
   onBack: () => void;
   onNext: () => void;
+  isLoading?: boolean;
+  canContinue: boolean;
+  validationMessage?: string | null;
 }
 
 export const AvailabilityStep: React.FC<AvailabilityStepProps> = ({
@@ -29,6 +32,9 @@ export const AvailabilityStep: React.FC<AvailabilityStepProps> = ({
   totalAmount,
   onBack,
   onNext,
+  isLoading = false,
+  canContinue,
+  validationMessage,
 }) => {
   const courtName = court.name;
   const courtPrice = court.price;
@@ -47,21 +53,31 @@ export const AvailabilityStep: React.FC<AvailabilityStepProps> = ({
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-10">
           <div className="space-y-8 lg:col-span-2">
             <AvailabilityDateSelector selectedDate={selectedDate} onDateChange={onDateChange} />
-            <AvailabilityTimeSlots
-              availableSlots={availableSlots}
-              selectedSlots={selectedSlots}
-              hourlyRate={courtPrice}
-              onToggleSlot={onToggleSlot}
-            />
+            {isLoading ? (
+              <p role="status">Cargando horarios disponibles...</p>
+            ) : (
+              <AvailabilityTimeSlots
+                availableSlots={availableSlots}
+                selectedSlots={selectedSlots}
+                hourlyRate={courtPrice}
+                onToggleSlot={onToggleSlot}
+              />
+            )}
           </div>
 
           <aside aria-label="Resumen de la reserva" className="lg:pl-2">
+            {!isLoading && validationMessage && (
+              <p className="mb-3 text-sm text-muted-foreground" role="status">
+                {validationMessage}
+              </p>
+            )}
             <AvailabilitySummary
               courtName={courtName}
               selectedDate={selectedDate}
               selectedSlots={selectedSlots}
               totalAmount={totalAmount}
               onNext={onNext}
+              disabled={!canContinue || isLoading}
             />
           </aside>
         </div>

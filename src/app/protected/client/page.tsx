@@ -1,17 +1,19 @@
+import { notifyToast, toast } from '@/services/toast-service';
 // src/app/protected/client/page.tsx
-import { useState, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import { SearchX, Trophy } from 'lucide-react';
 import { ClientNavbar } from './components/client-navbar';
 import { ClientHero } from './components/client-hero';
-import { CourtCard } from './components/court-card';
-import { CourtDetailsScreen } from './components/court-details-screen';
+import { CourtCard } from './courts/components/court-card';
+import { CourtDetailsScreen } from './courts/components/court-details-screen';
 import { AvailabilityStep } from './components/availability-step';
 import { ConfirmationStep } from './components/confirmation-step';
 import { ReservationSummaryStep } from './components/reservation-summary-step';
-import { MyReservationsList } from './components/my-reservations-list';
-import { useCourtsCatalog } from './hooks/use-courts-catalog';
+import { WhatsAppReservationButton } from './components/whatsapp-reservation-button';
+import { MyReservationsList } from './reservations/components/my-reservations-list';
+import { useCourtsCatalog } from './courts/hooks/use-courts-catalog';
 import { createReservation } from '@/services/reservation-service';
-import { getReservations } from '@/services/local-data-service';
+import { useReservations } from '@/hooks/use-reservations';
 import type { User, Reservation, PaymentMethod } from '@/types';
 
 export interface ClientPageProps {
@@ -25,19 +27,21 @@ export default function ClientPage({ user, onLogout }: ClientPageProps) {
     'availability' | 'confirmation' | 'summary'
   >('availability');
   const [completedReservation, setCompletedReservation] = useState<Reservation | null>(null);
-  const [reservationError, setReservationError] = useState<string | null>(null);
-
-  /** Reservas del usuario actual */
-  const getUserReservations = useCallback((): Reservation[] => {
-    const all = getReservations();
-    const userId = user?.id;
-    if (!userId) return [];
-    return all.filter((r) => r.userId === userId);
-  }, [user]);
-
-  const [userReservations, setUserReservations] = useState<Reservation[]>(getUserReservations);
+  const [, setReservationError] = useState<string | null>(null);
 
   const {
+    reservations: userReservations,
+    loading: reservationsLoading,
+    error: reservationsError,
+    refresh: refreshReservations,
+  } = useReservations();
+  const [savingReservation, setSavingReservation] = useState(false);
+  const busy = useRef(false);
+
+  const {
+    loading: courtsLoading,
+    error: courtsError,
+    refresh: refreshCourts,
     searchTerm,
     setSearchTerm,
     filteredCourts,
@@ -47,25 +51,29 @@ export default function ClientPage({ user, onLogout }: ClientPageProps) {
     selectedDate,
     handleDateChange,
     availableSlots,
+    canContinue,
+    selectionError,
+    slotsError,
+    slotsLoading,
+    retrySlots,
     selectedSlots,
     totalAmount,
     handleToggleSlot,
-    actionNotice,
-    setActionNotice,
     handleDetails,
     handleReserve,
     closeReservationFlow,
   } = useCourtsCatalog();
 
   const handleOpenMyReservations = () => {
-    setUserReservations(getUserReservations());
+    void refreshReservations();
     setViewMode('my-reservations');
     closeReservationFlow();
     setReservationError(null);
   };
 
-  const handleConfirmReservation = (paymentMethod: PaymentMethod) => {
-    if (!reservingCourt || selectedSlots.length === 0 || !user?.id) return;
+  const handleConfirmReservation = async (paymentMethod: PaymentMethod) => {
+    if (!reservingCourt || selectedSlots.length === 0 || !user?.id || !canContinue || busy.current)
+      return;
 
     setReservationError(null);
 
@@ -76,8 +84,12 @@ export default function ClientPage({ user, onLogout }: ClientPageProps) {
     const monto = totalAmount;
     const cliente = `${user.firstName} ${user.lastName || ''}`.trim();
 
+    busy.current = true;
+    setSavingReservation(true);
     try {
-      const allReservations = createReservation({
+      if (sorted.some((slot, index) => index > 0 && sorted[index - 1].endTime !== slot.startTime))
+        throw new Error('Selecciona horarios consecutivos para crear una reserva.');
+      const created = await createReservation({
         userId: user.id,
         courtId: reservingCourt.id,
         cancha: reservingCourt.name,
@@ -90,13 +102,18 @@ export default function ClientPage({ user, onLogout }: ClientPageProps) {
         observaciones: undefined,
       });
 
-      // La reserva recién creada es la última en la lista
-      const created = allReservations[allReservations.length - 1];
-      setUserReservations(allReservations.filter((r) => r.userId === user.id));
       setCompletedReservation(created);
       setReservationStep('summary');
+      toast.success(
+        'Reserva creada correctamente. Recepción debe confirmarla dentro de los próximos 15 minutos.'
+      );
     } catch (err) {
-      setReservationError(err instanceof Error ? err.message : 'No se pudo crear la reserva.');
+      setReservationError(
+        notifyToast(err instanceof Error ? err.message : 'No se pudo crear la reserva.', 'error')
+      );
+    } finally {
+      busy.current = false;
+      setSavingReservation(false);
     }
   };
 
@@ -127,12 +144,22 @@ export default function ClientPage({ user, onLogout }: ClientPageProps) {
         }}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 pt-6 pb-28 sm:pt-8 sm:pb-32 space-y-8">
+        {reservationsLoading && viewMode === 'my-reservations' && (
+          <p role="status">Cargando reservas…</p>
+        )}
+        {reservationsError && viewMode === 'my-reservations' && (
+          <button type="button" onClick={() => void refreshReservations()} className="underline">
+            Reintentar carga de reservas
+          </button>
+        )}
         {viewMode === 'my-reservations' ? (
-          <MyReservationsList
-            reservations={userReservations}
-            onExploreCourts={() => setViewMode('catalog')}
-          />
+          (reservationsLoading || reservationsError) && userReservations.length === 0 ? null : (
+            <MyReservationsList
+              reservations={userReservations}
+              onExploreCourts={() => setViewMode('catalog')}
+            />
+          )
         ) : (
           <>
             {!reservingCourt && (
@@ -143,43 +170,30 @@ export default function ClientPage({ user, onLogout }: ClientPageProps) {
               />
             )}
 
-            {actionNotice && (
-              <div
-                role="status"
-                className="p-4 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-sm font-semibold flex items-center justify-between animate-in fade-in"
-              >
-                <span>{actionNotice}</span>
-                <button
-                  type="button"
-                  onClick={() => setActionNotice(null)}
-                  className="text-xs hover:underline cursor-pointer ml-4 font-bold"
-                >
-                  Cerrar
-                </button>
-              </div>
-            )}
-
-            {reservationError && (
-              <div
-                role="alert"
-                className="p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-sm font-semibold flex items-center justify-between animate-in fade-in"
-              >
-                <span>{reservationError}</span>
-                <button
-                  type="button"
-                  onClick={() => setReservationError(null)}
-                  className="text-xs hover:underline cursor-pointer ml-4 font-bold"
-                >
-                  Cerrar
+            {courtsLoading && <p role="status">Cargando canchas...</p>}
+            {courtsError && (
+              <div>
+                <button type="button" onClick={() => void refreshCourts()} className="underline">
+                  Reintentar carga de canchas
                 </button>
               </div>
             )}
 
             {/* Flujo de Reserva */}
+            {slotsError && (
+              <div>
+                <button type="button" className="underline" onClick={retrySlots}>
+                  Reintentar carga de horarios
+                </button>
+              </div>
+            )}
             {reservingCourt ? (
               <div className="space-y-6">
                 {reservationStep === 'availability' && (
                   <AvailabilityStep
+                    isLoading={slotsLoading}
+                    canContinue={canContinue}
+                    validationMessage={selectionError}
                     court={reservingCourt}
                     selectedDate={selectedDate}
                     onDateChange={handleDateChange}
@@ -188,12 +202,17 @@ export default function ClientPage({ user, onLogout }: ClientPageProps) {
                     onToggleSlot={handleToggleSlot}
                     totalAmount={totalAmount}
                     onBack={closeReservationFlow}
-                    onNext={() => setReservationStep('confirmation')}
+                    onNext={() => {
+                      if (canContinue) setReservationStep('confirmation');
+                    }}
                   />
                 )}
 
                 {reservationStep === 'confirmation' && (
                   <ConfirmationStep
+                    saving={savingReservation}
+                    canConfirm={canContinue}
+                    validationMessage={slotsLoading ? 'Validando disponibilidad…' : selectionError}
                     court={reservingCourt}
                     selectedDate={selectedDate}
                     selectedSlots={selectedSlots}
@@ -246,7 +265,7 @@ export default function ClientPage({ user, onLogout }: ClientPageProps) {
                       />
                     ))}
                   </div>
-                ) : (
+                ) : !courtsLoading && !courtsError ? (
                   <div
                     role="status"
                     className="flex flex-col items-center rounded-2xl border border-dashed border-border bg-muted/20 px-6 py-12 text-center sm:py-16"
@@ -269,12 +288,15 @@ export default function ClientPage({ user, onLogout }: ClientPageProps) {
                         : 'Cuando se registren canchas disponibles, aparecerán aquí.'}
                     </p>
                   </div>
-                )}
+                ) : null}
               </section>
             )}
           </>
         )}
       </main>
+      <WhatsAppReservationButton
+        reservation={userReservations.find((reservation) => reservation.estado === 'PENDIENTE')}
+      />
     </div>
   );
 }

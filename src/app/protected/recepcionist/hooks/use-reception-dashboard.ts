@@ -1,26 +1,13 @@
-import { useState, useMemo, useEffect } from 'react';
-import { getReservations, getTodayDateString } from '@/services/local-data-service';
-import type { Reservation } from '@/types';
+import { useState, useMemo } from 'react';
+import { getTodayDateString } from '@/lib/date';
+import { useReservations } from '@/hooks/use-reservations';
 
 export function useReceptionDashboard() {
   const [activeSection, setActiveSection] = useState('/recepcionista');
   const [search, setSearch] = useState<string>('');
-  const [reservations, setReservations] = useState<Reservation[]>(getReservations);
+  const { reservations, loading, error, refresh } = useReservations();
 
-  const localDate = useMemo(() => getTodayDateString(), []);
-
-  useEffect(() => {
-    const refreshReservations = () => setReservations(getReservations());
-    const intervalId = window.setInterval(refreshReservations, 30_000);
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === null || event.key === 'kanchaya.reservations') refreshReservations();
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener('storage', handleStorage);
-    };
-  }, []);
+  const localDate = getTodayDateString();
 
   const todayReservations = useMemo(
     () => reservations.filter((item) => item.fecha === localDate),
@@ -60,6 +47,9 @@ export function useReceptionDashboard() {
   );
 
   return {
+    loading,
+    error,
+    refresh,
     activeSection,
     setActiveSection,
     search,

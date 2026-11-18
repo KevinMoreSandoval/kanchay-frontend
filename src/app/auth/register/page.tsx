@@ -1,3 +1,4 @@
+import { getTodayDateString } from '@/lib/date';
 import { Button, Checkbox, FormField, Input, Label, Loading, PasswordInput } from '@/components/ui';
 import { AuthLayout } from '../components/auth-layout';
 import { TermsModal } from '../components/terms-modal';
@@ -13,12 +14,13 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin }: R
   const {
     formData,
     errors,
-    errorMessage,
     loading,
     termsModalTitle,
     setTermsModalTitle,
     handleChange,
     handleSubmit,
+    handleBlur,
+    canSubmit,
   } = useRegisterForm({ onRegisterSuccess });
 
   return (
@@ -32,15 +34,6 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin }: R
         </p>
       </div>
 
-      {errorMessage && (
-        <div
-          role="alert"
-          className="p-3.5 rounded-lg border border-destructive/20 bg-destructive/10 text-destructive text-sm font-medium animate-in fade-in"
-        >
-          {errorMessage}
-        </div>
-      )}
-
       <TermsModal title={termsModalTitle} onClose={() => setTermsModalTitle(null)} />
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
@@ -53,6 +46,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin }: R
               autoComplete="given-name"
               value={formData.firstName}
               onChange={handleChange}
+              onBlur={handleBlur}
               disabled={loading}
               error={!!errors.firstName}
             />
@@ -66,6 +60,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin }: R
               autoComplete="family-name"
               value={formData.lastName}
               onChange={handleChange}
+              onBlur={handleBlur}
               disabled={loading}
               error={!!errors.lastName}
             />
@@ -81,6 +76,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin }: R
               autoComplete="off"
               value={formData.dni}
               onChange={handleChange}
+              onBlur={handleBlur}
               disabled={loading}
               error={!!errors.dni}
             />
@@ -91,9 +87,11 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin }: R
               id="birthDate"
               name="birthDate"
               type="date"
+              max={getTodayDateString()}
               autoComplete="bday"
               value={formData.birthDate}
               onChange={handleChange}
+              onBlur={handleBlur}
               disabled={loading}
               error={!!errors.birthDate}
             />
@@ -110,6 +108,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin }: R
               autoComplete="tel"
               value={formData.phone}
               onChange={handleChange}
+              onBlur={handleBlur}
               disabled={loading}
               error={!!errors.phone}
             />
@@ -124,6 +123,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin }: R
               autoComplete="email"
               value={formData.email}
               onChange={handleChange}
+              onBlur={handleBlur}
               disabled={loading}
               error={!!errors.email}
             />
@@ -137,6 +137,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin }: R
               autoComplete="new-password"
               value={formData.password}
               onChange={handleChange}
+              onBlur={handleBlur}
               disabled={loading}
               error={!!errors.password}
             />
@@ -155,6 +156,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin }: R
               autoComplete="new-password"
               value={formData.confirmPassword}
               onChange={handleChange}
+              onBlur={handleBlur}
               disabled={loading}
               error={!!errors.confirmPassword}
             />
@@ -168,6 +170,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin }: R
               name="acceptTerms"
               checked={formData.acceptTerms}
               onChange={handleChange}
+              onBlur={handleBlur}
               disabled={loading}
               error={!!errors.acceptTerms}
               className="mt-0.5"
@@ -208,7 +211,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin }: R
           type="submit"
           size="lg"
           className="w-full text-base font-bold shadow-md hover:shadow-lg transition-all"
-          disabled={loading}
+          disabled={!canSubmit}
         >
           {loading ? <Loading label="Creando cuenta..." /> : 'Crear cuenta'}
         </Button>

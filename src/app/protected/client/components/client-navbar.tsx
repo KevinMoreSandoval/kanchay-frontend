@@ -1,8 +1,8 @@
 // src/app/protected/client/components/client-navbar.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { LogOut, Ticket, ChevronDown } from 'lucide-react';
-import type { User, Reservation } from '@/types';
-import { getReservations } from '@/services/local-data-service';
+import type { User } from '@/types';
+import { useReservations } from '@/hooks/use-reservations';
 
 interface ClientNavbarProps {
   user?: User | null;
@@ -18,19 +18,9 @@ export const ClientNavbar: React.FC<ClientNavbarProps> = ({
   onGoHome,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [reservationsCount, setReservationsCount] = useState(0);
+  const { reservations } = useReservations();
+  const reservationsCount = reservations.length;
   const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const fetchCount = () => {
-      const reservations: Reservation[] = getReservations();
-      setReservationsCount(reservations.length);
-    };
-
-    fetchCount();
-    window.addEventListener('storage', fetchCount);
-    return () => window.removeEventListener('storage', fetchCount);
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

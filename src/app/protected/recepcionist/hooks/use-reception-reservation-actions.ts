@@ -1,5 +1,6 @@
-﻿import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { getReservations } from '@/services/local-data-service';
+import { notifyToast } from '@/services/toast-service';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { getReservation } from '@/services/reservations/reservation-api';
 import {
   cancelReservation,
   confirmReservation,
@@ -12,6 +13,8 @@ import {
   type ReservationSchedule,
 } from '@/services/reservation-service';
 import type { Reservation } from '@/types';
+import { useFormValidation } from '@/hooks/use-form-validation';
+import { validateSchedule, scheduleChanged } from '@/lib/validation';
 
 export function useReceptionReservationActions(onChanged: () => void) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -26,11 +29,31 @@ export function useReceptionReservationActions(onChanged: () => void) {
   });
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [saving, setSaving] = useState(false);
+  const busy = useRef(false);
+  const openVersion = useRef(0);
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(timer);
   }, []);
+  const scheduleValidation = useFormValidation(schedule, (data) => validateSchedule(data, now));
+  const hasScheduleChanges = selection
+    ? scheduleChanged(schedule, {
+        date: selection.reservation.fecha,
+        startTime: selection.reservation.horaInicio,
+        endTime: selection.reservation.horaFin,
+      })
+    : false;
+  const actionAvailable = selection
+    ? getAvailableReservationActions(selection.reservation, now).some(
+        (action) => action.id === selection.action.id
+      )
+    : false;
+  const canSubmit =
+    !saving &&
+    actionAvailable &&
+    (selection?.action.type !== 'reschedule' || (scheduleValidation.isValid && hasScheduleChanges));
   const isOpen = selection !== null;
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -46,63 +69,107 @@ export function useReceptionReservationActions(onChanged: () => void) {
     };
   }, [isOpen]);
 
-  function open(reservation: Reservation, action: ReservationAction) {
-    setFeedback('');
-    setError('');
-    const latest = getReservations().find((item) => item.id === reservation.id);
-    if (!latest || !getAvailableReservationActions(latest).some((item) => item.id === action.id)) {
-      setError('Esta acción ya no está disponible. Se actualizó el listado de reservas.');
-      onChanged();
-      return;
+  async function open(reservation: Reservation, action: ReservationAction) {
+    if (busy.current) return;
+    scheduleValidation.reset();
+    const version = ++openVersion.current;
+    try {
+      setFeedback('');
+      setError('');
+      const latest = await getReservation(reservation.id);
+      if (version !== openVersion.current) return;
+      if (
+        !latest ||
+        !getAvailableReservationActions(latest).some((item) => item.id === action.id)
+      ) {
+        setError(
+          notifyToast(
+            'Esta acción ya no está disponible. Se actualizó el listado de reservas.',
+            'error'
+          )
+        );
+        onChanged();
+        return;
+      }
+      setSchedule({ date: latest.fecha, startTime: latest.horaInicio, endTime: latest.horaFin });
+      setSelection({ reservation: latest, action });
+    } catch (cause) {
+      notifyToast(
+        cause instanceof Error ? cause.message : 'No se pudo consultar la reserva.',
+        'error'
+      );
     }
-    setSchedule({ date: latest.fecha, startTime: latest.horaInicio, endTime: latest.horaFin });
-    setSelection({ reservation: latest, action });
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selection) return;
+    if (!selection || busy.current) return;
+    scheduleValidation.showAll();
+    if (!canSubmit) return;
+    if (selection.action.type === 'reschedule' && Object.keys(validateSchedule(schedule)).length) {
+      setNow(Date.now());
+      return;
+    }
+    busy.current = true;
+    setSaving(true);
     setError('');
     const { reservation, action } = selection;
     try {
-      const latest = getReservations().find((item) => item.id === reservation.id);
+      const latest = await getReservation(reservation.id);
       if (!latest || !getAvailableReservationActions(latest).some((item) => item.id === action.id))
         throw new Error('Esta acción ya no está disponible para la reserva.');
       switch (action.type) {
         case 'confirm':
-          confirmReservation(reservation.id);
+          await confirmReservation(reservation.id);
           break;
         case 'attendance':
-          markReservationAttendance(reservation.id);
+          await markReservationAttendance(reservation.id);
           break;
         case 'cancel':
-          cancelReservation(reservation.id);
+          await cancelReservation(reservation.id);
           break;
         case 'reschedule':
-          rescheduleReservation(reservation.id, schedule);
+          await rescheduleReservation(reservation.id, schedule);
           break;
         case 'pay':
-          updateReservationPaymentStatus(reservation.id, 'PAGADO');
+          await updateReservationPaymentStatus(reservation.id, 'PAGADO');
           break;
         case 'refund':
-          updateReservationPaymentStatus(reservation.id, 'REEMBOLSADO');
+          await updateReservationPaymentStatus(reservation.id, 'REEMBOLSADO');
           break;
         case 'surcharge':
           if (action.surchargeIndex === undefined) throw new Error('No se encontró el recargo.');
-          updateReservationSurchargePayment(reservation.id, action.surchargeIndex);
+          await updateReservationSurchargePayment(reservation.id, action.surchargeIndex);
           break;
       }
-      setFeedback(`${action.label}: operación completada para la reserva #${reservation.id}.`);
+      setFeedback(
+        notifyToast(
+          `${action.label}: operación completada para la reserva #${reservation.id}.`,
+          'success'
+        )
+      );
       setSelection(null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'No se pudo completar la acción.');
+      setError(
+        notifyToast(
+          cause instanceof Error ? cause.message : 'No se pudo completar la acción.',
+          'error'
+        )
+      );
     } finally {
+      busy.current = false;
+      setSaving(false);
       setNow(Date.now());
       onChanged();
     }
   }
 
   return {
+    saving,
+    canSubmit,
+    hasScheduleChanges,
+    scheduleErrors: scheduleValidation.errors,
+    touchSchedule: scheduleValidation.touch,
     dialogRef,
     selection,
     schedule,
@@ -113,6 +180,8 @@ export function useReceptionReservationActions(onChanged: () => void) {
     feedback,
     now,
     close: () => {
+      if (busy.current) return;
+      openVersion.current++;
       setSelection(null);
       setError('');
     },

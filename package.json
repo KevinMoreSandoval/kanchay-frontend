@@ -3,11 +3,21 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test:auth": "node --test tests/auth.test.mjs",
+    "test:toast": "node --test tests/toast/toast.test.mjs",
+    "test:users": "node --test tests/users/user-service.test.mjs",
+    "test:forms": "node --test tests/forms/validation.test.mjs",
+    "test:deployment": "node --test tests/deployment.test.mjs",
+    "test:reservations": "node --test --test-concurrency=1 tests/reservations/reservation-api.test.mjs tests/reservations/client-reservations.test.mjs tests/reservations/payment-contact.test.mjs",
+    "test:courts": "node --test tests/courts/court-service.test.mjs tests/courts/court-form.test.mjs",
     "preview": "vite preview",
     "prepare": "husky"
   },

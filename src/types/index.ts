@@ -11,37 +11,12 @@ export interface User {
   phone?: string;
 }
 
-export interface UserWithCredentials extends User {
-  passwordHash?: string;
-  passwordSalt?: string;
-}
-
 export interface AuthSession {
   token: string;
   user: User;
 }
 
-export interface CourtScheduleEntry {
-  day: string;
-  opens: string;
-  closes: string;
-  isOpen: boolean;
-}
-
-export interface Court {
-  id: number;
-  name: string;
-  location: string;
-  description?: string;
-  address?: string;
-  reference?: string;
-  mapUrl?: string;
-  schedule?: CourtScheduleEntry[];
-  price: number;
-  image?: string;
-  images?: string[];
-  features: string[];
-}
+export type { Court } from './courts';
 
 export type ReservationStatus =
   'CONFIRMADA' | 'PENDIENTE' | 'EN_CURSO' | 'FINALIZADA' | 'NO_ASISTIO' | 'CANCELADA';
@@ -80,4 +55,5 @@ export interface Reservation {
   attendedAt?: string;
   canceledAt?: string;
   scheduleChanges?: ReservationScheduleChange[];
+  canCancel?: boolean;
 }

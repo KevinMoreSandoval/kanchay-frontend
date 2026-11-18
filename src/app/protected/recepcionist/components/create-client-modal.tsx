@@ -1,4 +1,5 @@
-﻿import { createPortal } from 'react-dom';
+import { getTodayDateString } from '@/lib/date';
+import { createPortal } from 'react-dom';
 import { Info, UserRoundPlus, X } from 'lucide-react';
 import {
   Button,
@@ -124,12 +125,14 @@ export function CreateClientModal({ initialDni, onClose, onCreated }: CreateClie
                         id={id}
                         label={field.label}
                         error={client.errors[key]}
+                        onBlur={() => client.touchField(key)}
                         required
                       >
                         <Input
                           id={id}
                           name={key}
                           type={field.type ?? 'text'}
+                          max={key === 'birthDate' ? getTodayDateString() : undefined}
                           required
                           autoFocus={key === 'firstName'}
                           inputMode={key === 'dni' || key === 'phone' ? 'numeric' : undefined}
@@ -152,20 +155,12 @@ export function CreateClientModal({ initialDni, onClose, onCreated }: CreateClie
                     lo realizará posteriormente el propio cliente.
                   </p>
                 </div>
-                {client.error && (
-                  <p
-                    role="alert"
-                    className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive"
-                  >
-                    {client.error}
-                  </p>
-                )}
               </div>
               <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-border bg-muted/20 px-5 py-4 sm:flex-row sm:justify-end sm:px-8">
                 <Button type="button" variant="outline" disabled={client.saving} onClick={close}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={client.saving}>
+                <Button type="submit" disabled={!client.canSubmit}>
                   {client.saving ? <Loading label="Creando cliente..." /> : 'Crear cliente'}
                 </Button>
               </div>
