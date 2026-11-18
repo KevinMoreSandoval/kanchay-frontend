@@ -7,7 +7,7 @@
   "rewrites": [
     {
       "source": "/backend/:path*",
-      "destination": "https://kanchay-api.onrender.com/:path*"
+      "destination": "https://sports-booking-system-backend.onrender.com/:path*"
     },
     { "source": "/((?!backend(?:/|$)).*)", "destination": "/index.html" }
   ],

@@ -6,7 +6,7 @@ Este documento describe el comportamiento implementado en las pantallas y los se
 
 ## Despliegue
 
-Consulta [DEPLOYMENT.md](DEPLOYMENT.md) para publicar en Vercel y conectar el backend en Render. Se incluyen `vercel.json`, Node.js 22.x y un proxy `/backend` que permite restaurar la sesión con una cookie del mismo dominio. Antes del despliegue, cambia el destino de ejemplo del rewrite por la URL real de tu servicio de Render y configura sus variables.
+Consulta [DEPLOYMENT.md](DEPLOYMENT.md) para publicar en Vercel y conectar el backend en Render. Se incluyen `vercel.json`, Node.js 22.x y un proxy `/backend` que permite restaurar la sesión con una cookie del mismo dominio. El rewrite apunta a `https://sports-booking-system-backend.onrender.com`; configura `VITE_API_URL=/backend` en Vercel y las variables del backend según la guía.
 
 ## Ejecutar en desarrollo
 

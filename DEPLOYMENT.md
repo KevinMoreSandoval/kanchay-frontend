@@ -2,12 +2,18 @@
 
 El proyecto incluye `vercel.json` para Vite, build con `npm ci` y `npm run build`, salida `dist`, rutas SPA y proxy HTTP hacia Render. Usa Node.js 22.x, declarado en `package.json`.
 
+## URLs configuradas
+
+- Frontend: `https://kanchay-frontend.vercel.app`
+- Backend: `https://sports-booking-system-backend.onrender.com`
+- Proxy del frontend: `https://kanchay-frontend.vercel.app/backend`
+
 ## Configuración
 
 1. Sube el frontend a su repositorio e impórtalo en Vercel. Si importas un monorepo con ambos proyectos, selecciona **Root Directory: `kanchay-frontend`**. Si el repositorio contiene solo este proyecto, usa su raíz.
 2. Selecciona el preset Vite y Node.js 22.x. `vercel.json` ya declara comandos y directorio de salida.
 3. Despliega el backend siguiendo [su guía](../sports-booking-system-backend/DEPLOYMENT.md) y copia la URL HTTPS real que asigne Render.
-4. En `vercel.json`, reemplaza `https://kanchay-api.onrender.com` en el primer rewrite por esa URL. Es una referencia inicial que debe coincidir con tu servicio real; no es una URL desplegada ni se sustituye mediante variables de Vercel.
+4. El primer rewrite de `vercel.json` apunta a `https://sports-booking-system-backend.onrender.com`. Si despliegas otro backend, cambia ese destino por la URL HTTPS del nuevo servicio. El destino no se sustituye mediante variables de Vercel.
 5. En **Environment Variables** de Vercel añade `VITE_API_URL=/backend` para Production. Es también el valor predeterminado del código compilado si no se define la variable.
 6. Despliega y configura en Render `FRONTEND_URL` y `CORS_ALLOWED_ORIGINS` con la URL exacta de Vercel, sin barra final, y `SESSION_COOKIE_PATH=/backend/auth`.
 
